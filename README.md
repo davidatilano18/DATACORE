@@ -79,6 +79,11 @@ Con la API en ejecución:
 .venv\Scripts\python -m streamlit run src/datacore/dashboard/Inicio.py
 ```
 
+![Resumen ejecutivo](reports/dashboard/inicio.png)
+
+Capturas de todas las páginas en [`reports/dashboard/`](reports/dashboard/) (se regeneran con
+`python scripts/capturas_dashboard.py` con la API y el dashboard corriendo).
+
 El dashboard consume únicamente la API. Configura `DATACORE_API_URL` (por defecto
 `http://127.0.0.1:8000`) y, si el servicio exige autenticación, `DATACORE_API_KEY`
 en el entorno del proceso. Las lecturas se conservan en caché durante cinco minutos.

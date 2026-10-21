@@ -65,8 +65,8 @@ def api_disponible():
     ('pages/1_Ventas.py', 'Ventas', 'date_input'),
     ('pages/2_Inventario.py', 'Inventario', 'dataframe'),
     ('pages/3_Alertas.py', 'Alertas', 'selectbox'),
-    ('pages/4_Pronostico.py', 'Pronóstico', 'text_input'),
-    ('pages/5_Calidad_y_operacion.py', 'Calidad y operación', 'dataframe'),
+    ('pages/4_Pronóstico.py', 'Pronóstico', 'text_input'),
+    ('pages/5_Calidad_y_operación.py', 'Calidad y operación', 'dataframe'),
 ])
 def test_paginas_api_real(api_disponible, archivo, titulo, elemento):
     aplicacion = AppTest.from_file(str(RAIZ / 'src/datacore/dashboard' / archivo)).run(timeout=60)

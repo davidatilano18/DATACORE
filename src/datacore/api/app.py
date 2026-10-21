@@ -8,6 +8,7 @@ alerta) usa el rol de la aplicación. Si DATACORE_API_KEY está definida, todas
 las rutas salvo /salud exigen el encabezado X-API-Key.
 """
 
+import math
 import os
 import secrets
 import time
@@ -28,6 +29,7 @@ from .consultas import filas, filtros, una
 
 log = obtener_logger("api")
 LIMITE_MAX = 5000
+Z_80 = 1.2816  # cuantil 0.9 de la normal: intervalo central del 80 %
 Limite = Annotated[int, Query(ge=1, le=LIMITE_MAX, description="Máximo de filas")]
 
 
@@ -259,10 +261,25 @@ def modelo(eng=Depends(lector)):
 def pronosticos(id_producto: int | None = None, id_sucursal: int | None = None, eng=Depends(lector)):
     where, p = filtros(**{"f.id_producto": id_producto, "f.id_sucursal": id_sucursal})
     where = (where + " AND " if where else "WHERE ") + "m.activo"
-    return filas(eng, f"""SELECT f.semana_inicio, sum(f.demanda_estimada) AS demanda_estimada,
-                                 sum(f.limite_inferior) AS limite_inferior, sum(f.limite_superior) AS limite_superior
-                          FROM ops.predicciones_demanda f JOIN ops.modelos m USING (id_modelo)
-                          {where} GROUP BY 1 ORDER BY 1""", **p)
+    detalle = filas(eng, f"""SELECT f.semana_inicio, f.demanda_estimada, f.limite_inferior, f.limite_superior,
+                                    m.metricas -> 'dispersion_nb' AS dispersion
+                             FROM ops.predicciones_demanda f JOIN ops.modelos m USING (id_modelo)
+                             {where} ORDER BY f.semana_inicio""", **p)
+    if len({d["semana_inicio"] for d in detalle}) == len(detalle):  # una sola serie: límites tal cual
+        return [{k: d[k] for k in ("semana_inicio", "demanda_estimada", "limite_inferior", "limite_superior")}
+                for d in detalle]
+    # Varias series: los percentiles no se suman. Se suman medias y varianzas de la binomial
+    # negativa (Var = μ + μ²/k, con k del horizonte) y se usa la aproximación normal al 80 %.
+    semanas = sorted({d["semana_inicio"] for d in detalle})
+    salida = []
+    for h, semana in enumerate(semanas, start=1):
+        mus = [d["demanda_estimada"] for d in detalle if d["semana_inicio"] == semana]
+        k = float(((detalle[0]["dispersion"] or {}).get(f"h{h}")) or 1.0)
+        media, sd = sum(mus), math.sqrt(sum(mu + mu * mu / k for mu in mus))
+        salida.append({"semana_inicio": semana, "demanda_estimada": round(media, 2),
+                       "limite_inferior": round(max(0.0, media - Z_80 * sd), 2),
+                       "limite_superior": round(media + Z_80 * sd, 2)})
+    return salida
 
 
 @app.get("/incidencias/mensuales", tags=["operación"], dependencies=protegido)
