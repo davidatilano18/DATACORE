@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS ops.corridas (
 CREATE TABLE IF NOT EXISTS ops.anomalias (
     id BIGSERIAL PRIMARY KEY,
     fecha DATE NOT NULL,
-    id_sucursal INTEGER NOT NULL REFERENCES core.sucursales(id_sucursal),
+    id_sucursal INTEGER NOT NULL,
     metrica VARCHAR(10) NOT NULL CHECK (metrica IN ('ingreso', 'tickets')),
     tipo VARCHAR(5) NOT NULL CHECK (tipo IN ('caida', 'pico')),
     valor NUMERIC(18,2) NOT NULL,
@@ -46,3 +46,18 @@ CREATE TABLE IF NOT EXISTS ops.anomalias (
     detectada_en TIMESTAMP NOT NULL DEFAULT now(),
     UNIQUE (fecha, id_sucursal, metrica)
 );
+
+-- Migración: quita las llaves foráneas de ops hacia core en bases creadas antes de este cambio
+-- (el TRUNCATE ... CASCADE del ETL vaciaba pronósticos, alertas atendidas y anomalías).
+-- Sin el carácter de porcentaje: psycopg lo interpretaría como marcador de parámetro.
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN SELECT conrelid::regclass::text AS tabla, conname
+             FROM pg_constraint
+             WHERE contype = 'f' AND connamespace = 'ops'::regnamespace
+               AND starts_with(confrelid::regclass::text, 'core.')
+    LOOP
+        EXECUTE 'ALTER TABLE ' || r.tabla || ' DROP CONSTRAINT ' || quote_ident(r.conname);
+    END LOOP;
+END $$;
