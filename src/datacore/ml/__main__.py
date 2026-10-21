@@ -24,6 +24,8 @@ def main() -> None:
     parser.add_argument("--horizontes", type=int, nargs="+")
     parser.add_argument("--ground-truth", type=Path, default=Path("data/ground_truth"))
     parser.add_argument("--reporte", type=Path, default=Path("reports/ml"))
+    parser.add_argument("--origenes", type=int, default=4,
+                        help="bloques de 13 semanas para la validación con origen móvil (evaluar)")
     args = parser.parse_args()
     t0 = time.perf_counter()
 
@@ -37,7 +39,8 @@ def main() -> None:
     if args.accion == "evaluar":
         perdida = args.ground_truth / "demanda_perdida.parquet"
         real = demanda_real(series, pd.read_parquet(perdida)) if perdida.exists() else None
-        r = backtest.ejecutar(series, horizontes=tuple(args.horizontes or (1, 2, 4)), real=real, log=log)
+        r = backtest.ejecutar(series, horizontes=tuple(args.horizontes or (1, 2, 4)), origenes=args.origenes,
+                              real=real, log=log)
         args.reporte.mkdir(parents=True, exist_ok=True)
         texto = backtest.reporte_markdown(r)
         if 1 in r["dispersion"]:

@@ -55,6 +55,26 @@ def test_modelo_supera_al_ingenuo(series):
     assert abs(m.loc[("gbm", "todos"), "sesgo"]) < 0.25
 
 
+def test_origen_movil_y_evaluacion_de_alertas(series):
+    from datacore.ml import evaluacion_alertas
+    r = backtest.ejecutar(series, horizontes=(1,), semanas_prueba=4, origenes=2, variantes={"gbm": False},
+                          log=lambda _: None)
+    assert len(r["origenes"]) == 2 and r["origenes"][1] - r["origenes"][0] == pd.Timedelta(weeks=4)
+    pred = r["predicciones"]
+    # Cada bloque solo se predice con un modelo entrenado antes de su inicio.
+    assert set(pred["origen"]) == set(r["origenes"])
+    assert (pred["semana"] >= pred["origen"]).all()
+    assert set(r["metricas_por_origen"]["origen"]) == set(r["origenes"])
+    tabla, casos = evaluacion_alertas.evaluar(series, pred, r["dispersion"][1])
+    assert casos > 0 and len(tabla) == 3
+    assert tabla["precision"].dropna().between(0, 1).all()
+    # El umbral p90 es más alto que la media: alerta al menos igual de seguido.
+    t = tabla.set_index("regla")
+    assert t.loc["modelo (p90)", "alertas"] >= t.loc["modelo (media)", "alertas"]
+    assert "Evaluación de las alertas" in evaluacion_alertas.reporte_markdown(tabla, casos)
+    assert "por bloque" in backtest.reporte_markdown(r)
+
+
 def test_pronostico_y_alertas(series):
     pron = publicacion.pronosticar(series, horizontes=(1, 2), dispersion={1: 2.0, 2: 2.0}, log=lambda _: None)
     assert (pron["demanda_estimada"] >= 0).all()
