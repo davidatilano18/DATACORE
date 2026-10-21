@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Los datos se regeneran con el generador (misma semilla = mismos datos).
+data/
+
+.env
+.vscode/
+.idea/
