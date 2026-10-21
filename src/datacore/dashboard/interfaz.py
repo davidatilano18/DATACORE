@@ -35,6 +35,13 @@ def moneda(valor):
     return f"$ {valor:,.2f} MXN" if valor is not None else "Sin datos"
 
 
+def moneda_corta(valor):
+    """Para tarjetas: las cifras de millones no caben completas."""
+    if valor is None:
+        return "Sin datos"
+    return f"$ {valor / 1e6:,.1f} M MXN" if abs(valor) >= 1e6 else moneda(valor)
+
+
 def sucursal():
     opciones = {"Todas": None}
     opciones.update({f"{s['codigo']} · {s['nombre']}": s['id_sucursal']
@@ -72,7 +79,7 @@ def inicio():
             columnas = st.columns(3)
         valor = resumen.get(campo)
         delta = resumen.get('crecimiento_pct') if campo == 'ingreso_ultimos_12_meses' else None
-        columnas[posicion % 3].metric(titulo, moneda(valor) if es_moneda else
+        columnas[posicion % 3].metric(titulo, moneda_corta(valor) if es_moneda else
                                      (f"{valor:,.0f}" if valor is not None else "Sin datos"),
                                      delta=f"{delta:.2f} % vs. 12 meses previos" if delta is not None else None)
     st.subheader("Ventas mensuales")
@@ -158,7 +165,10 @@ def alertas():
         st.info("No hay alertas pendientes para estos filtros.")
         return
     grafica(marco.groupby('tipo').size().reset_index(name='total'), 'bar', 'tipo', 'total')
-    st.dataframe(marco, hide_index=True)
+    visibles = {'sucursal': 'Sucursal', 'sku': 'SKU', 'producto': 'Producto', 'categoria': 'Categoría',
+                'tipo': 'Alerta', 'existencia': 'Existencia', 'demanda_estimada': 'Demanda esperada (p90)',
+                'dias_cobertura': 'Cobertura (días)', 'id_alerta': 'Folio'}
+    st.dataframe(marco[[c for c in visibles if c in marco]].rename(columns=visibles), hide_index=True)
     opciones = {f"{a['id_alerta']} · {a['sucursal']} · {a['sku']} · {a['tipo']}": a['id_alerta']
                 for a in marco.to_dict('records')}
     seleccion = st.selectbox("Alerta que se atenderá", list(opciones))
@@ -199,7 +209,8 @@ def pronostico():
     figura.update_layout(template='plotly_white', yaxis_title='Unidades', xaxis_title='Semana')
     st.plotly_chart(figura, width='stretch')
     if identificador is None:
-        st.caption("La API suma los límites por sucursal; el intervalo agregado no garantiza cobertura conjunta del 80 %.")
+        st.caption("Todas las sucursales: el intervalo del 80 % combina las varianzas de cada sucursal "
+                   "(binomial negativa), no suma sus percentiles.")
     st.subheader("Modelo activo y comparación con media móvil")
     modelo = datos('/modelo')
     st.write(f"Versión {modelo['version']} · Corte {modelo['fecha_corte_datos']} · {modelo['algoritmo']}")

@@ -69,6 +69,20 @@ def test_pronostico_de_un_producto(cliente):
     assert all(s["limite_inferior"] <= s["demanda_estimada"] + 1 for s in serie)
 
 
+def test_intervalo_agregado_combina_varianzas(cliente):
+    prod = cliente.get("/alertas?tipo=RIESGO_DESABASTO&limite=1").json()[0]["id_producto"]
+    total = cliente.get(f"/pronosticos?id_producto={prod}").json()
+    sucursales = [cliente.get(f"/pronosticos?id_producto={prod}&id_sucursal={s['id_sucursal']}").json()
+                  for s in cliente.get("/catalogos/sucursales").json()]
+    suma_inferiores = sum(s[0]["limite_inferior"] for s in sucursales if s)
+    suma_superiores = sum(s[0]["limite_superior"] for s in sucursales if s)
+    # Sumar percentiles exagera el rango; combinar varianzas lo hace más estrecho y centrado.
+    assert abs(total[0]["demanda_estimada"] - sum(s[0]["demanda_estimada"] for s in sucursales if s)) < 0.05
+    assert total[0]["limite_inferior"] >= suma_inferiores - 1e-6
+    assert total[0]["limite_superior"] <= suma_superiores + 1e-6
+    assert total[0]["limite_inferior"] <= total[0]["demanda_estimada"] <= total[0]["limite_superior"]
+
+
 def test_clave_api(monkeypatch):
     from datacore.api.app import app
     monkeypatch.setenv("DATACORE_API_KEY", "secreta")
