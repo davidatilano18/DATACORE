@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PG_HOST: localhost
+      PG_PORT: "5432"
+      PG_DB: datacore
+      PG_ADMIN_USER: postgres
+      PG_ADMIN_PASSWORD: postgres
+      PG_APP_USER: datacore_app
+      PG_APP_PASSWORD: ci_app_clave
+      PG_LECTOR_USER: datacore_lector
+      PG_LECTOR_PASSWORD: ci_lector_clave
+      DATACORE_API_URL: http://127.0.0.1:8000
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Cliente de PostgreSQL (pg_dump / pg_restore)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
+
+      - name: Dependencias
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Datos simulados (catálogo reducido, periodo completo)
+        run: python -m datacore.generator --salida data --productos 120 --clientes 1500
+
+      - name: Base de datos, roles y esquema
+        run: python -m datacore.db_setup
+
+      - name: ETL con evaluación de calidad
+        run: python -m datacore.etl --evaluar
+
+      - name: Modelo de demanda (publicación)
+        run: python -m datacore.ml publicar
+
+      - name: Levantar la API
+        run: |
+          nohup python -m uvicorn datacore.api.app:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/salud && break; sleep 2; done
+
+      - name: Pruebas
+        run: python -m pytest -q -p no:cacheprovider
+
+      - name: Respaldo con prueba de recuperación y monitoreo
+        run: |
+          python -m datacore.operacion respaldo --verificar
+          python -m datacore.operacion monitoreo
+
+      - name: Construir la imagen Docker y probar la API en contenedor
+        run: |
+          docker build -t datacore:ci .
+          docker run -d --name api --network host -e SERVICIO=api -e PORT=8100 \
+            -e PG_HOST -e PG_PORT -e PG_DB -e PG_APP_USER -e PG_APP_PASSWORD -e PG_LECTOR_USER -e PG_LECTOR_PASSWORD \
+            -e PG_ADMIN_USER -e PG_ADMIN_PASSWORD datacore:ci
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8100/salud && break; sleep 2; done
+          curl -sf http://127.0.0.1:8100/kpi/resumen | head -c 400
+          docker logs api | tail -20
+
+      - name: Reportes como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes
+          path: |
+            reports/etl/calidad.md
+            api.log
+            logs/

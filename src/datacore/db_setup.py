@@ -43,6 +43,8 @@ def aplicar_esquema(reset: bool) -> None:
             c.execute(text("DROP SCHEMA IF EXISTS core CASCADE; DROP SCHEMA IF EXISTS ops CASCADE;"))
             c.exec_driver_sql(ddl)
             print("esquema aplicado: db/schema.sql")
+        c.exec_driver_sql((RAIZ / "db" / "operacion.sql").read_text(encoding="utf-8"))
+        print("tablas de operación aplicadas: db/operacion.sql")
         c.exec_driver_sql((RAIZ / "db" / "vistas.sql").read_text(encoding="utf-8"))
         print("vistas aplicadas: db/vistas.sql")
         for esquema in ("core", "ops", "kpi"):

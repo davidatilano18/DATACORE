@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.engine import URL
 
-RAIZ = Path(__file__).resolve().parents[2]
+# Raíz del proyecto (db/, logs/, backups/); en contenedores se puede fijar con DATACORE_ROOT.
+RAIZ = Path(os.getenv("DATACORE_ROOT", Path(__file__).resolve().parents[2]))
 load_dotenv(RAIZ / ".env")
 
 ROLES = {

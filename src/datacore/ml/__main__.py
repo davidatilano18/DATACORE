@@ -39,7 +39,13 @@ def main() -> None:
         real = demanda_real(series, pd.read_parquet(perdida)) if perdida.exists() else None
         r = backtest.ejecutar(series, horizontes=tuple(args.horizontes or (1, 2, 4)), real=real, log=log)
         args.reporte.mkdir(parents=True, exist_ok=True)
-        (args.reporte / "backtest.md").write_text(backtest.reporte_markdown(r), encoding="utf-8")
+        texto = backtest.reporte_markdown(r)
+        if 1 in r["dispersion"]:
+            from . import evaluacion_alertas
+            tabla, casos = evaluacion_alertas.evaluar(series, r["predicciones"], r["dispersion"][1])
+            print(tabla.to_string(index=False, float_format=lambda x: f"{x:.3f}"))
+            texto += "\n" + evaluacion_alertas.reporte_markdown(tabla, casos)
+        (args.reporte / "backtest.md").write_text(texto, encoding="utf-8")
         r["metricas"].to_csv(args.reporte / "backtest_metricas.csv", index=False)
         log(f"reporte → {args.reporte / 'backtest.md'}")
         return

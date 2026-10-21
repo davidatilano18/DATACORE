@@ -1,0 +1,33 @@
+-- DATACORE · Tablas de operación (respaldos y monitoreo).
+-- Idempotente: db_setup lo aplica en cada ejecución sin tocar datos existentes.
+
+CREATE TABLE IF NOT EXISTS ops.respaldos (
+    id_respaldo     BIGSERIAL PRIMARY KEY,
+    inicio          TIMESTAMP    NOT NULL DEFAULT now(),
+    fin             TIMESTAMP,
+    archivo         VARCHAR(255) NOT NULL,
+    tamano_bytes    BIGINT,
+    estatus         VARCHAR(10)  NOT NULL CHECK (estatus IN ('exitoso', 'fallido')),
+    verificado      BOOLEAN      NOT NULL DEFAULT FALSE,  -- se restauró en una base de prueba y cuadró
+    detalle         TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ops.monitoreo (
+    id_chequeo   BIGSERIAL PRIMARY KEY,
+    revisado_en  TIMESTAMP   NOT NULL DEFAULT now(),
+    componente   VARCHAR(30) NOT NULL,      -- base_de_datos, api, dashboard, disco, etl, respaldo, modelo
+    estado       VARCHAR(10) NOT NULL CHECK (estado IN ('ok', 'alerta', 'falla')),
+    latencia_ms  NUMERIC(10,1),
+    detalle      TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_monitoreo_componente ON ops.monitoreo (componente, revisado_en DESC);
+
+CREATE TABLE IF NOT EXISTS ops.corridas (
+    id_corrida  BIGSERIAL PRIMARY KEY,
+    proceso     VARCHAR(30) NOT NULL,       -- diario
+    inicio      TIMESTAMP   NOT NULL DEFAULT now(),
+    fin         TIMESTAMP,
+    estatus     VARCHAR(10) NOT NULL CHECK (estatus IN ('en_curso', 'exitosa', 'fallida')),
+    pasos       JSONB       NOT NULL DEFAULT '[]'::jsonb,  -- [{paso, estatus, segundos, detalle}]
+    mensaje_error TEXT
+);
