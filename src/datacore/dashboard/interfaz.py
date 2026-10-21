@@ -262,12 +262,13 @@ def calidad():
 
 
 def ejecutar(pagina):
-    st.set_page_config(page_title=f"DATACORE · {pagina}", layout="wide")
+    from datacore.dashboard import tema
+    from datacore.dashboard.vistas import inicio as vista_inicio
+    tema.preparar(pagina)
     try:
-        {'Inicio': inicio, 'Ventas': ventas, 'Inventario': inventario, 'Alertas': alertas,
+        {'Inicio': vista_inicio.mostrar, 'Ventas': ventas, 'Inventario': inventario, 'Alertas': alertas,
          'Pronóstico': pronostico, 'Calidad y operación': calidad}[pagina]()
     except ErrorAPI as exc:
         st.error(str(exc))
     finally:
-        st.divider()
-        st.caption(PIE)
+        tema.pie()

@@ -61,7 +61,7 @@ def api_disponible():
 
 
 @pytest.mark.parametrize('archivo,titulo,elemento', [
-    ('Inicio.py', 'Resumen ejecutivo', 'metric'),
+    ('Inicio.py', 'Resumen ejecutivo', 'markdown'),
     ('pages/1_Ventas.py', 'Ventas', 'date_input'),
     ('pages/2_Inventario.py', 'Inventario', 'dataframe'),
     ('pages/3_Alertas.py', 'Alertas', 'selectbox'),
@@ -75,5 +75,6 @@ def test_paginas_api_real(api_disponible, archivo, titulo, elemento):
     assert aplicacion.title[0].value == titulo
     assert len(getattr(aplicacion, elemento)) > 0
     if archivo == 'Inicio.py':
-        assert len(aplicacion.metric) == 12  # 9 indicadores + 3 de estado de la plataforma
+        tarjetas = sum(m.value.count('class="dc-tarjeta"') for m in aplicacion.markdown)
+        assert tarjetas == 8  # 4 de negocio + 4 de salud del inventario
     assert any('empresa ficticia' in texto.value for texto in aplicacion.caption)
