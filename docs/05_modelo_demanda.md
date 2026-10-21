@@ -97,6 +97,28 @@ En cada semana del periodo de prueba se aplicó la regla con el pronóstico de e
 
 Las alertas se escriben en `ops.alertas_inventario`; los pronósticos, en `ops.predicciones_demanda`; y la versión del modelo con sus métricas, en `ops.modelos`.
 
+## Detección de anomalías (RF-13)
+
+`python -m datacore.ml anomalias` revisa el ingreso y los tickets diarios de cada sucursal (`kpi.ventas_diarias_sucursal`) y reemplaza `ops.anomalias` en una transacción. La API la expone en `GET /anomalias` y el dashboard la muestra en *Calidad y operación*. Lo implementó Codex; el cambio a la prueba de Poisson se hizo en la revisión.
+
+**Valor esperado** (solo con datos pasados): la mediana de los últimos 8 días iguales de la semana (mínimo 6), multiplicada por la tendencia reciente (mediana de la razón observado/base de los 28 días previos, acotada entre 0.5 y 2).
+
+**Prueba:**
+- **Tickets:** como son conteos, se calcula la cola de Poisson (p medio) del valor observado contra el esperado y se expresa como z normal.
+- **Ingreso:** z robusto con MAD de los residuos de los 56 días previos. Se publica como información adicional, pero no se usa para evaluar: los tickets grandes de los mayoristas lo hacen muy ruidoso (F1 de 0.04 por sí solo).
+
+Las fechas especiales del calendario (Buen Fin, Reyes, 10 de mayo, Navidad, etc.) se excluyen explícitamente: con solo tres años, una referencia anual sería muy escasa. A cambio, no se detectan fallas en esos días.
+
+**Evaluación** contra los 325 días-sucursal con falla del punto de venta (`ground_truth/fallas_sistema`, usado solo para medir):
+
+| Detector | Umbral | Precisión | Exhaustividad | F1 |
+|---|---|---|---|---|
+| **Poisson sobre tickets (publicado)** | z < −2.33 (cola de 1 %) | **38.6 %** | **29.5 %** | **0.335** |
+| Poisson sobre tickets | z < −2.58 (0.5 %) | 43.2 % | 22.5 % | 0.296 |
+| MAD sobre ingreso y tickets (primera versión) | z < −2.5 | 23.8 % | 13.5 % | 0.173 |
+
+Exhaustividad por duración de la falla (umbral publicado): 2-3 h, 12.7 %; 4-5 h, 15.2 %; **6-8 h, 49.6 %**. Una falla de 2 o 3 horas reduce los tickets de 17 a 25 %, una variación que el ruido normal de un día (unos 10 a 20 tickets por sucursal) ya alcanza, así que es casi indetectable con datos diarios. Las caídas largas sí se distinguen. El umbral se eligió por F1 sobre el mismo historial (selección exploratoria, no fuera de muestra). Detalle: [`reports/ml/anomalias.md`](../reports/ml/anomalias.md).
+
 ## Limitaciones
 
 - La validación con origen móvil cubre un año (2025). Con más historia podrían usarse más bloques.

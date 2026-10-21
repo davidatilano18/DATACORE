@@ -204,3 +204,4 @@ CREATE TABLE ops.alertas_inventario (
     atendida       BOOLEAN     NOT NULL DEFAULT FALSE
 );
 CREATE INDEX ix_alertas_pendientes ON ops.alertas_inventario (atendida, tipo);
+-- Las tablas de operación (respaldos, monitoreo, corridas, anomalías) están en db/operacion.sql.

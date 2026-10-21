@@ -57,6 +57,9 @@ jobs:
       - name: Modelo de demanda (publicación)
         run: python -m datacore.ml publicar
 
+      - name: Detección de anomalías
+        run: python -m datacore.ml anomalias
+
       - name: Levantar la API
         run: |
           nohup python -m uvicorn datacore.api.app:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &

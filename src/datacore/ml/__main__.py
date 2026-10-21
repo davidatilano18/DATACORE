@@ -20,7 +20,7 @@ from .datos import cargar, demanda_real
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Pronóstico de demanda de DATACORE.")
-    parser.add_argument("accion", choices=["evaluar", "publicar"])
+    parser.add_argument("accion", choices=["evaluar", "publicar", "anomalias"])
     parser.add_argument("--horizontes", type=int, nargs="+")
     parser.add_argument("--ground-truth", type=Path, default=Path("data/ground_truth"))
     parser.add_argument("--reporte", type=Path, default=Path("reports/ml"))
@@ -31,6 +31,11 @@ def main() -> None:
 
     def log(msg):
         print(f"[{time.perf_counter() - t0:6.1f}s] {msg}", flush=True)
+
+    if args.accion == "anomalias":
+        from . import anomalias
+        anomalias.ejecutar(engine("app"), args.ground_truth, args.reporte)
+        return
 
     series = cargar(engine("app"))
     log(f"series: {series.unidades.shape[1]:,} pares × {series.unidades.shape[0]} semanas "

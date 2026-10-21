@@ -31,3 +31,18 @@ CREATE TABLE IF NOT EXISTS ops.corridas (
     pasos       JSONB       NOT NULL DEFAULT '[]'::jsonb,  -- [{paso, estatus, segundos, detalle}]
     mensaje_error TEXT
 );
+
+
+-- Detección diaria de ventas (RF-13); publicación reemplazada en una transacción.
+CREATE TABLE IF NOT EXISTS ops.anomalias (
+    id BIGSERIAL PRIMARY KEY,
+    fecha DATE NOT NULL,
+    id_sucursal INTEGER NOT NULL REFERENCES core.sucursales(id_sucursal),
+    metrica VARCHAR(10) NOT NULL CHECK (metrica IN ('ingreso', 'tickets')),
+    tipo VARCHAR(5) NOT NULL CHECK (tipo IN ('caida', 'pico')),
+    valor NUMERIC(18,2) NOT NULL,
+    esperado NUMERIC(18,2) NOT NULL,
+    z DOUBLE PRECISION NOT NULL,
+    detectada_en TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE (fecha, id_sucursal, metrica)
+);
