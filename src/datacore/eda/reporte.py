@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.dates as fechas
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 import pandas as pd
 
@@ -15,6 +16,12 @@ import pandas as pd
 TABLAS = ("sucursales", "categorias", "proveedores", "productos", "clientes", "ventas",
           "detalle_venta", "inventario", "movimientos_inventario", "incidencias")
 MESES = ("Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic")
+
+
+def _millones(eje, etiqueta="Ingreso (millones de MXN)"):
+    """Eje Y en millones de pesos en lugar de notación científica (1e7)."""
+    eje.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v / 1e6:,.1f}"))
+    eje.set_ylabel(etiqueta)
 
 
 def _guardar(fig, salida, nombre, texto, secciones):
@@ -37,6 +44,8 @@ def _mensuales(ventas, detalle, salida, secciones):
     ejes[1].set(title="Estacionalidad por año", xlabel="Mes", ylabel="Ingreso (MXN)",
                 xticks=range(1, 13), xticklabels=MESES)
     ejes[1].legend()
+    for eje in ejes:
+        _millones(eje)
     _guardar(fig, salida, "ventas_mensuales",
              f"El máximo mensual fue {mensual.idxmax():%Y-%m}: {mensual.max():,.2f} MXN; "
              f"el mínimo fue {mensual.idxmin():%Y-%m}: {mensual.min():,.2f} MXN.", secciones)
@@ -64,6 +73,7 @@ def _sucursales(ventas, salida, secciones):
     for eje, columna, titulo in zip(ejes, ("sum", "mean"), ("Ventas por sucursal", "Ticket promedio por sucursal")):
         resumen[columna].plot.bar(ax=eje)
         eje.set(title=titulo, xlabel="Sucursal", ylabel="MXN")
+    _millones(ejes[0])
     lider = resumen.index[0]
     _guardar(fig, salida, "sucursales",
              f"{lider} encabeza el ingreso con {resumen.loc[lider, 'sum']:,.2f} MXN "

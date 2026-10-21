@@ -27,7 +27,21 @@ Para el horizonte *h*, todo rezago o ventana usa datos hasta *t − h* (lo verif
 - **Calendario** (se conoce de antemano): semana del año, mes, Buen Fin, Navidad, fin de año, Reyes, Día de las Madres, Día del Niño, regreso a clases y número de quincenas en la semana.
 - **Atributos:** sucursal, categoría, región, tamaño de sucursal, días de entrega del proveedor y semanas de vida del par.
 
-## Resultados (13 semanas de prueba)
+## Resultados con origen móvil (52 semanas de prueba)
+
+`python -m datacore.ml evaluar` usa por defecto **4 bloques consecutivos de 13 semanas** (de enero a diciembre de 2025). Cada bloque se pronostica con un modelo entrenado solo con las semanas anteriores a su inicio.
+
+| WAPE producto-semana, año completo | h=1 | h=2 | h=4 |
+|---|---|---|---|
+| **Modelo** | **26.9 %** | **27.0 %** | **27.2 %** |
+| Media móvil de 8 semanas | 28.8 % | 29.3 % | 30.2 % |
+| SBA | 33.9 % | 34.2 % | 34.6 % |
+| Ingenuo | 36.0 % | 36.6 % | 37.5 % |
+| Estacional | 38.9 % | 39.0 % | 39.1 % |
+
+**El modelo es el mejor método en los 12 casos** (4 bloques × 3 horizontes). Su ventaja sobre la media móvil va de 0.6 puntos (bloque de abril a junio, h=1) a 4.4 puntos (octubre a diciembre, h=4): crece justo en la temporada de Buen Fin y Navidad, cuando el calendario más importa. El sesgo se mantiene entre −1.4 % y −1.1 %. El detalle por bloque está en `reports/ml/backtest.md`.
+
+## Resultados del primer backtest (13 semanas: octubre a diciembre de 2025)
 
 | WAPE | h=1 | h=2 | h=4 |
 |---|---|---|---|
@@ -67,6 +81,8 @@ Excluir las semanas censuradas **empeoró** el sesgo, contra lo que se esperaba.
 
 ### ¿Las alertas de desabasto anticipan faltantes reales?
 
+*(Primer backtest de 13 semanas. Con el origen móvil de 52 semanas, 239,271 casos, los resultados se sostienen: el percentil 90 tiene 51.6 % de exhaustividad y 15.5 % de precisión; con el valor medio, el modelo logra F1 0.275 contra 0.245 del promedio simple.)*
+
 En cada semana del periodo de prueba se aplicó la regla con el pronóstico de ese momento y la existencia al cierre de la semana. Después se revisó si en las **dos semanas siguientes** hubo al menos un día sin existencia. Fueron 60,527 casos con existencia positiva, de los cuales 3,102 (5.1 %) terminaron en faltante.
 
 | Regla | Alertas | Aciertos | Precisión | Exhaustividad | F1 |
@@ -83,6 +99,6 @@ Las alertas se escriben en `ops.alertas_inventario`; los pronósticos, en `ops.p
 
 ## Limitaciones
 
-- El periodo de prueba es uno solo. Un backtest con varios orígenes (*rolling origin*) daría una estimación más robusta.
+- La validación con origen móvil cubre un año (2025). Con más historia podrían usarse más bloques.
 - Los productos descontinuados no tienen fecha de baja en `core`. Se excluyen de la publicación con el campo `activo`, pero sí aparecen en el entrenamiento con ceros.
 - Las sucursales y los productos nuevos tienen poca historia; el modelo se apoya en categoría, región y media del producto.
