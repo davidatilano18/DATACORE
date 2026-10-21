@@ -1,0 +1,13 @@
+.venv/
+.git/
+.github/
+.tmp*/
+data/
+logs/
+backups/
+reports/
+tests/
+docs/
+**/__pycache__/
+*.pyc
+.env

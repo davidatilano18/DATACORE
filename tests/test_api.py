@@ -37,7 +37,7 @@ def test_salud(cliente):
 
 
 @pytest.mark.parametrize("ruta", ["/kpi/resumen", "/catalogos/sucursales", "/catalogos/categorias",
-                                  "/catalogos/productos?buscar=Arroz", "/ventas/sucursales", "/ventas/categorias",
+                                  "/catalogos/productos?buscar=NX-","/ventas/sucursales", "/ventas/categorias",
                                   "/productos/abc?clase=A", "/inventario/cobertura?estado=exceso",
                                   "/inventario/estados", "/inventario/desabasto", "/alertas?tipo=RIESGO_DESABASTO",
                                   "/modelo", "/pronosticos", "/calidad/ultima-carga", "/etl/ejecuciones",

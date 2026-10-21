@@ -39,6 +39,7 @@ class Series:
     unidades: pd.DataFrame        # (semanas × pares) unidades vendidas
     precio: pd.DataFrame          # precio promedio cobrado, arrastrado hacia adelante
     agotado: pd.DataFrame         # fracción de días de la semana con existencia 0
+    existencia: pd.DataFrame      # existencia al cierre del domingo de cada semana
     inicio_par: pd.Series         # primera semana completa de vida de cada par
     sucursales: pd.DataFrame
     productos: pd.DataFrame
@@ -73,6 +74,7 @@ def construir_series(semanal, existencia, productos, sucursales, inventario, fec
     inicio_dia = diaria.notna().idxmax()
     agotado = (diaria == 0).astype(float).where(diaria.notna())
     agotado = agotado.resample("W-MON", label="left", closed="left").mean().reindex(semanas)
+    cierre = diaria.resample("W-MON", label="left", closed="left").last().reindex(semanas)
 
     inicio_par = inicio_dia.map(lambda d: d if d.dayofweek == 0 else d + pd.offsets.Week(weekday=0))
     vivo = pd.DataFrame(semanas.to_numpy()[:, None] >= inicio_par.to_numpy()[None, :], index=semanas, columns=pares)
@@ -83,7 +85,8 @@ def construir_series(semanal, existencia, productos, sucursales, inventario, fec
                                   aggfunc="sum").reindex(index=semanas, columns=pares)
     precio = (ingreso / unidades).ffill()
     unidades = unidades.fillna(0).where(vivo)
-    return Series(unidades=unidades, precio=precio, agotado=agotado.where(vivo), inicio_par=inicio_par,
+    return Series(unidades=unidades, precio=precio, agotado=agotado.where(vivo), existencia=cierre.where(vivo),
+                  inicio_par=inicio_par,
                   sucursales=sucursales, productos=productos, inventario=inventario, fecha_corte=fecha_corte)
 
 

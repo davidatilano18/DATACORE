@@ -1,7 +1,8 @@
-"""Uso: python -m datacore.generator [--seed 42] [--salida data]"""
+"""Uso: python -m datacore.generator [--seed 42] [--salida data] [--productos 400] [--clientes 8000] [--fecha-fin 2025-12-31]"""
 
 import argparse
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 
 from .config import GeneratorConfig
@@ -14,8 +15,10 @@ def main() -> None:
     parser.add_argument("--salida", type=Path, default=Path("data"))
     parser.add_argument("--productos", type=int, default=GeneratorConfig.n_productos)
     parser.add_argument("--clientes", type=int, default=GeneratorConfig.n_clientes)
+    parser.add_argument("--fecha-fin", type=date.fromisoformat, default=GeneratorConfig.fecha_fin)
     args = parser.parse_args()
-    cfg = replace(GeneratorConfig(), seed=args.seed, n_productos=args.productos, n_clientes=args.clientes)
+    cfg = replace(GeneratorConfig(), seed=args.seed, n_productos=args.productos, n_clientes=args.clientes,
+                  fecha_fin=args.fecha_fin)
     generar(cfg, args.salida)
 
 
