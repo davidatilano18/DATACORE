@@ -12,6 +12,8 @@ from datetime import datetime
 import pandas as pd
 from sqlalchemy import Engine, text
 
+from datacore.db_setup import refrescar_vistas
+
 ORDEN = ["sucursales", "categorias", "proveedores", "productos", "clientes", "ventas",
          "detalle_venta", "inventario", "movimientos_inventario", "incidencias"]
 
@@ -50,4 +52,5 @@ def cargar(engine: Engine, tablas: dict[str, pd.DataFrame], hallazgos: pd.DataFr
             c.execute(text("INSERT INTO ops.etl_ejecuciones (proceso, inicio, fin, estatus, mensaje_error) "
                            "VALUES ('etl_completo', :i, now(), 'fallida', :m)"), {"i": inicio, "m": str(exc)[:2000]})
         raise
+    refrescar_vistas(engine)
     return ids

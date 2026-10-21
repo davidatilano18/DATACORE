@@ -11,5 +11,9 @@ psycopg[binary]>=3.2
 sqlalchemy>=2.0
 python-dotenv>=1.0
 
+# Modelado
+scikit-learn>=1.5
+scipy>=1.13
+
 # Pruebas
 pytest>=8

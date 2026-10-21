@@ -1,13 +1,14 @@
 """Crea la base de datos, los roles y el esquema de DATACORE.
 
-Uso: python -m datacore.db_setup [--reset]
+Uso: python -m datacore.db_setup [--reset | --refrescar]
 
 --reset borra y recrea los esquemas core y ops (se pierden los datos cargados).
 """
 
 import argparse
+from time import perf_counter
 
-from sqlalchemy import text
+from sqlalchemy import Engine, text
 
 from .db import RAIZ, engine, variable
 
@@ -42,7 +43,9 @@ def aplicar_esquema(reset: bool) -> None:
             c.execute(text("DROP SCHEMA IF EXISTS core CASCADE; DROP SCHEMA IF EXISTS ops CASCADE;"))
             c.exec_driver_sql(ddl)
             print("esquema aplicado: db/schema.sql")
-        for esquema in ("core", "ops"):
+        c.exec_driver_sql((RAIZ / "db" / "vistas.sql").read_text(encoding="utf-8"))
+        print("vistas aplicadas: db/vistas.sql")
+        for esquema in ("core", "ops", "kpi"):
             c.execute(text(f'GRANT USAGE ON SCHEMA {esquema} TO "{lector}"'))
             c.execute(text(f'GRANT SELECT ON ALL TABLES IN SCHEMA {esquema} TO "{lector}"'))
             c.execute(text(f'ALTER DEFAULT PRIVILEGES IN SCHEMA {esquema} GRANT SELECT ON TABLES TO "{lector}"'))
@@ -51,10 +54,35 @@ def aplicar_esquema(reset: bool) -> None:
         print("tablas:", dict(tablas))
 
 
+def refrescar_vistas(engine: Engine) -> dict[str, float]:
+    """Refresca las materializadas existentes y devuelve sus tiempos en segundos.
+
+    Una instalación sin kpi todavía no requiere refresco. Todos los agregados
+    se actualizan en una transacción y con una misma foto de los datos.
+    """
+    tiempos = {}
+    with engine.connect().execution_options(isolation_level="REPEATABLE READ") as c:
+        with c.begin():
+            vistas = c.execute(text("SELECT matviewname FROM pg_matviews "
+                                    "WHERE schemaname = 'kpi' ORDER BY matviewname")).scalars().all()
+            for vista in vistas:
+                inicio = perf_counter()
+                nombre = c.dialect.identifier_preparer.quote(vista)
+                c.exec_driver_sql(f"REFRESH MATERIALIZED VIEW kpi.{nombre}")
+                tiempos[vista] = perf_counter() - inicio
+    return tiempos
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--reset", action="store_true")
+    parser.add_argument("--refrescar", action="store_true",
+                        help="refresca únicamente las vistas materializadas existentes")
     args = parser.parse_args()
+    if args.refrescar:
+        for vista, segundos in refrescar_vistas(engine("app")).items():
+            print(f"kpi.{vista}: {segundos:.3f} s")
+        return
     crear_roles_y_base()
     aplicar_esquema(args.reset)
 
