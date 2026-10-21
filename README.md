@@ -55,3 +55,22 @@ python -m venv .venv
 
 - `data/raw/`: lo que "envía" cada área: CSV del POS por año, Excel de compras, CSV del CRM en Windows-1252, movimientos de almacén e incidencias. **Trae defectos a propósito.**
 - `data/ground_truth/`: versión limpia de referencia, bitácora de defectos inyectados y datos ocultos (demanda perdida, órdenes de compra).
+
+## Dashboard
+
+Con la API en ejecución:
+
+```powershell
+.venv\Scripts\python -m streamlit run src/datacore/dashboard/Inicio.py
+```
+
+El dashboard consume únicamente la API. Configura `DATACORE_API_URL` (por defecto
+`http://127.0.0.1:8000`) y, si el servicio exige autenticación, `DATACORE_API_KEY`
+en el entorno del proceso. Las lecturas se conservan en caché durante cinco minutos.
+
+- **Inicio:** indicadores ejecutivos, ventas mensuales y salud de la plataforma.
+- **Ventas:** fechas y sucursal, serie diaria, media móvil, categorías y clasificación ABC histórica.
+- **Inventario:** estados, cobertura por sucursal y tasa mensual de desabasto.
+- **Alertas:** pendientes por tipo y sucursal, con acción para marcarlas como atendidas.
+- **Pronóstico:** búsqueda por nombre/SKU, historia de 52 semanas, cuatro semanas previstas e indicadores del modelo.
+- **Calidad y operación:** hallazgos por regla y acción, ejecuciones del ETL e incidencias mensuales.
