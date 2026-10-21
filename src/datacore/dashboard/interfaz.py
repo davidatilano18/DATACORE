@@ -217,6 +217,29 @@ def pronostico():
 
 def calidad():
     st.title("Calidad y operación")
+    st.subheader("Anomalías de ventas diarias")
+    opciones = {f"{s['codigo']} · {s['nombre']}": s['id_sucursal']
+                for s in datos('/catalogos/sucursales')}
+    if opciones:
+        identificador = opciones[st.selectbox("Sucursal para anomalías", list(opciones))]
+        diaria = tabla('/ventas/diarias', id_sucursal=identificador)
+        anomalias = tabla('/anomalias', id_sucursal=identificador)
+        figura = go.Figure()
+        if not diaria.empty:
+            diaria['fecha'] = pd.to_datetime(diaria.fecha)
+            diaria = diaria.set_index('fecha')
+            diaria = diaria.reindex(pd.date_range(diaria.index.min(), diaria.index.max(),
+                                                   name='fecha'), fill_value=0).reset_index()
+            figura.add_scatter(x=diaria.fecha, y=diaria.ingreso, name='Ingreso diario')
+        if not anomalias.empty:
+            ingreso = anomalias[anomalias.metrica == 'ingreso']
+            for tipo in ['caida', 'pico']:
+                puntos = ingreso[ingreso.tipo == tipo]
+                figura.add_scatter(x=puntos.fecha, y=puntos.valor, mode='markers', name=tipo)
+        figura.update_layout(template='plotly_white', yaxis_title='Ingreso (MXN)')
+        st.plotly_chart(figura, width='stretch')
+        st.dataframe(anomalias, hide_index=True)
+    st.caption("Eventos festivos excluidos; las primeras semanas requieren historia suficiente.")
     st.subheader("Hallazgos de la última carga")
     marco = tabla('/calidad/ultima-carga')
     grafica(marco, 'bar', 'regla', 'conteo', color='accion', barmode='group')

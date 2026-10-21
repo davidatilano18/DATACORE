@@ -270,3 +270,13 @@ def incidencias(id_sucursal: int | None = None, eng=Depends(lector)):
     where, p = filtros(id_sucursal=id_sucursal)
     return filas(eng, f"""SELECT mes, tipo, sum(total) AS total, sum(abiertas) AS abiertas
                           FROM kpi.incidencias_mensuales {where} GROUP BY 1, 2 ORDER BY 1, 2""", **p)
+
+
+@app.get("/anomalias", tags=["operación"], dependencies=protegido)
+def anomalias(id_sucursal: int | None = None, desde: date | None = None, hasta: date | None = None,
+              tipo: str | None = Query(None, pattern="^(caida|pico)$"), eng=Depends(lector)):
+    where, p = filtros(**{"a.id_sucursal": id_sucursal, "a.fecha >=": desde,
+                          "a.fecha <=": hasta, "a.tipo": tipo})
+    return filas(eng, f"""SELECT a.*, s.codigo AS sucursal FROM ops.anomalias a
+                          JOIN core.sucursales s USING (id_sucursal)
+                          {where} ORDER BY a.fecha, a.id_sucursal, a.metrica""", **p)

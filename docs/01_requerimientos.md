@@ -35,7 +35,7 @@ No existe un repositorio central. Los datos llegan con duplicados, formatos inco
 | RF-10 | Ofrecer un dashboard interactivo con filtros por fecha, sucursal y categoría. | Alta |
 | RF-11 | Respaldar la base de datos automáticamente y poder restaurarla. | Media |
 | RF-12 | Monitorear la disponibilidad de los servicios (BD, API, dashboard) y registrar eventos. | Media |
-| RF-13 | Detectar anomalías en ventas o inventario (complementario). | Baja |
+| RF-13 | Detectar anomalías en ventas o inventario (complementario). Implementado para ventas diarias por sucursal: detector robusto, evaluación contra fallas, API y dashboard (docs/05). | Baja |
 
 ## 3. Requerimientos no funcionales
 
