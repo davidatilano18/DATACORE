@@ -123,3 +123,13 @@ La demanda real (ventas + demanda no surtida) solo existe en la simulación. Mid
 ## Intervalos
 
 Dispersión binomial negativa estimada en la prueba (Var = μ + μ²/k): h=1: k=2.31, h=2: k=2.35, h=4: k=2.33.
+
+## Evaluación de las alertas de desabasto
+
+60,527 casos (par × semana de origen) en el periodo de prueba, con existencia positiva al cierre. Un *faltante real* es al menos un día sin existencia en las dos semanas siguientes. La alerta se dispara si la existencia es menor que la demanda esperada durante el tiempo de entrega + 7 días.
+
+| regla | alertas | faltantes reales | aciertos | precisión | exhaustividad | F1 |
+|---|---|---|---|---|---|---|
+| modelo (p90) | 10,359 | 3,102 | 1,677 | 16.2% | 54.1% | 0.249 |
+| modelo (media) | 3,436 | 3,102 | 955 | 27.8% | 30.8% | 0.292 |
+| promedio 4 semanas | 5,019 | 3,102 | 1,029 | 20.5% | 33.2% | 0.253 |
