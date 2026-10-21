@@ -37,6 +37,16 @@ def test_retencion_de_respaldos(tmp_path, monkeypatch):
     assert len(list(tmp_path.glob("datacore_*.dump"))) == 1
 
 
+def test_ops_no_depende_de_core_por_llaves_foraneas():
+    """El ETL recarga core con TRUNCATE ... CASCADE: una llave foránea de ops hacia core
+    borraría el historial de pronósticos, las alertas atendidas y las anomalías."""
+    with engine("app").connect() as c:
+        n = c.execute(text("SELECT count(*) FROM pg_constraint WHERE contype = 'f' "
+                           "AND connamespace = 'ops'::regnamespace "
+                           "AND starts_with(confrelid::regclass::text, 'core.')")).scalar()
+    assert n == 0
+
+
 def test_monitoreo_registra_componentes():
     from datacore.operacion.monitoreo import revisar
     resultados = revisar(api_url="http://127.0.0.1:9")  # puerto sin servicio: la API debe salir en falla

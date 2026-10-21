@@ -1,4 +1,4 @@
-"""Proceso diario: respaldo → ETL (incluye refresco de kpi) → modelo → monitoreo.
+"""Proceso diario: respaldo → ETL (incluye refresco de kpi) → modelo → anomalías → monitoreo.
 
 El respaldo va primero porque el ETL recarga `core` por completo: si algo
 sale mal, siempre existe la foto anterior. Cada paso queda en ops.corridas.
@@ -47,6 +47,7 @@ def ejecutar(raw: Path | None = None, con_modelo: bool = True, verificar_respald
         _paso("etl", lambda: etl(raw or RAIZ / "data" / "raw", cargar_bd=True), pasos)
         if con_modelo:
             _paso("modelo", _publicar_modelo, pasos)
+            _paso("anomalias", _publicar_anomalias, pasos)
     except Exception as exc:
         error = exc
         log.exception("la corrida diaria falló")
@@ -61,6 +62,11 @@ def ejecutar(raw: Path | None = None, con_modelo: bool = True, verificar_respald
                       {"e": "fallida" if error else "exitosa", "p": json.dumps(pasos),
                        "m": str(error)[:2000] if error else None, "i": id_corrida})
     return error is None
+
+
+def _publicar_anomalias():
+    from ..ml import anomalias
+    anomalias.ejecutar(engine("app"), RAIZ / "data" / "ground_truth", RAIZ / "reports" / "ml")
 
 
 def _publicar_modelo():

@@ -7,9 +7,11 @@
 | `python -m datacore.operacion respaldo --verificar` | `pg_dump` de `core`, `ops` y `kpi` (formato comprimido); restaura en una base temporal y compara las filas de cada tabla. Conserva los 7 respaldos más recientes. | `backups/`, `ops.respaldos` (columna `verificado`), `logs/respaldo.log` |
 | `python -m datacore.operacion verificar [archivo]` | Solo la prueba de recuperación de un respaldo existente. | igual |
 | `python -m datacore.operacion monitoreo` | Revisa la base (latencia y versión), la API (`/salud`), el dashboard (`/_stcore/health`), el espacio en disco y la antigüedad del último ETL, respaldo y modelo. Devuelve código 1 si algo falla. | `ops.monitoreo`, `logs/monitoreo.log` |
-| `python -m datacore.operacion diario` | Respaldo y verificación → ETL (refresca `kpi`) → publicación del modelo → monitoreo. | `ops.corridas` (pasos, duración, error), `logs/diario.log` |
+| `python -m datacore.operacion diario` | Respaldo y verificación → ETL (refresca `kpi`) → publicación del modelo → detección de anomalías → monitoreo. | `ops.corridas` (pasos, duración, error), `logs/diario.log` |
 
 El respaldo va **antes** del ETL porque el ETL recarga `core` por completo: siempre hay una foto previa.
+
+**Decisión de diseño:** las tablas de salida de `ops` (pronósticos, alertas, anomalías) no tienen llave foránea hacia `core`. El ETL recarga `core` con `TRUNCATE … CASCADE`, y con llaves foráneas cada recarga vaciaba también el historial de pronósticos y las alertas ya atendidas. El error se detectó en la revisión nocturna del 21/10/2026; `db/operacion.sql` incluye la migración que quita esas llaves en bases existentes, y una prueba evita que vuelvan.
 
 **Resultado medido (20/10/2026):** respaldo de 16 MB en 3 s; la restauración de 15 tablas con 1,525,992 filas cuadró al 100 % en 12 s.
 

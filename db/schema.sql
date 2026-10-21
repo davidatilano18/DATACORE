@@ -180,10 +180,13 @@ CREATE TABLE ops.modelos (
     UNIQUE (nombre, version)
 );
 
+-- Las tablas de salida de ops NO tienen llave foránea hacia core a propósito: el ETL recarga
+-- core con TRUNCATE ... CASCADE y una llave foránea vaciaría también el historial de
+-- pronósticos y las alertas atendidas. Los id de core son estables entre recargas.
 CREATE TABLE ops.predicciones_demanda (
     id_modelo      INTEGER       NOT NULL REFERENCES ops.modelos,
-    id_sucursal    SMALLINT      NOT NULL REFERENCES core.sucursales,
-    id_producto    INTEGER       NOT NULL REFERENCES core.productos,
+    id_sucursal    SMALLINT      NOT NULL,
+    id_producto    INTEGER       NOT NULL,
     semana_inicio  DATE          NOT NULL,           -- lunes de la semana pronosticada
     demanda_estimada NUMERIC(10,2) NOT NULL,
     limite_inferior  NUMERIC(10,2),
@@ -194,8 +197,8 @@ CREATE TABLE ops.predicciones_demanda (
 
 CREATE TABLE ops.alertas_inventario (
     id_alerta      BIGSERIAL PRIMARY KEY,
-    id_sucursal    SMALLINT    NOT NULL REFERENCES core.sucursales,
-    id_producto    INTEGER     NOT NULL REFERENCES core.productos,
+    id_sucursal    SMALLINT    NOT NULL,
+    id_producto    INTEGER     NOT NULL,
     tipo           VARCHAR(20) NOT NULL CHECK (tipo IN ('RIESGO_DESABASTO', 'EXCESO_INVENTARIO', 'SIN_ROTACION')),
     existencia     INTEGER     NOT NULL,
     demanda_estimada NUMERIC(10,2),
