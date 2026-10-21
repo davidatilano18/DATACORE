@@ -34,10 +34,17 @@ src/datacore/eda/        listo: reporte exploratorio en reports/eda/
 src/datacore/db.py       conexión (roles admin / app / lector desde .env; nunca imprimas .env)
 src/datacore/ml/         listo: pronóstico semanal (GBM Poisson por horizonte), backtest, alertas (docs/05)
 db/vistas.sql            esquema kpi (indicadores); se refresca al final de cada ETL
-src/datacore/api/        pendiente: FastAPI
-src/datacore/dashboard/  pendiente: Streamlit
+src/datacore/api/        listo: FastAPI (uvicorn datacore.api.app:app)
+src/datacore/dashboard/  listo: Streamlit, consume solo la API
+src/datacore/operacion/  listo: respaldo verificado, monitoreo, proceso diario (python -m datacore.operacion)
+.github/workflows/ci.yml CI con PostgreSQL 16 + build Docker
 db/schema.sql            DDL de PostgreSQL (esquemas core y ops)
 ```
+
+## Restricciones del equipo
+
+- **No ejecutes comandos de Railway** (`railway up/link/init/...`): la cuenta aloja otro proyecto del equipo.
+  El despliegue lo decide el equipo; ver docs/06.
 
 ## Cómo trabajar una tarea
 

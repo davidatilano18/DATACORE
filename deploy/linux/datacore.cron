@@ -1,0 +1,5 @@
+# Equivalente en Linux (crontab -e del usuario que ejecuta DATACORE). Ajusta la ruta.
+# Proceso diario a las 02:00: respaldo → ETL → modelo → monitoreo.
+0 2 * * *    cd /opt/datacore && .venv/bin/python -m datacore.operacion diario    >> logs/cron.log 2>&1
+# Monitoreo cada 30 minutos.
+*/30 * * * * cd /opt/datacore && .venv/bin/python -m datacore.operacion monitoreo >> logs/cron.log 2>&1

@@ -1,5 +1,7 @@
 # DATACORE
 
+[![CI](https://github.com/davidatilano18/DATACORE/actions/workflows/ci.yml/badge.svg)](https://github.com/davidatilano18/DATACORE/actions/workflows/ci.yml)
+
 **Plataforma Inteligente de Gestión, Monitoreo y Análisis de Datos Empresariales**
 
 Proyecto de estadía de la Universidad Politécnica de Querétaro, Ingeniería en Datos e Inteligencia Artificial.
@@ -31,9 +33,20 @@ python -m venv .venv
 .venv\Scripts\python -m datacore.ml evaluar
 .venv\Scripts\python -m datacore.ml publicar
 
+# Servicios: API (http://127.0.0.1:8000/docs) y dashboard (http://localhost:8501)
+.venv\Scripts\python -m uvicorn datacore.api.app:app --port 8000
+.venv\Scripts\python -m streamlit run src/datacore/dashboard/Inicio.py
+
+# Operación: respaldo verificado, monitoreo y proceso diario completo
+.venv\Scripts\python -m datacore.operacion respaldo --verificar
+.venv\Scripts\python -m datacore.operacion monitoreo
+.venv\Scripts\python -m datacore.operacion diario
+
 # Pruebas
 .venv\Scripts\python -m pytest -q
 ```
+
+Guía completa: [manual técnico](docs/manual_tecnico.md).
 
 ## Estado
 
@@ -47,9 +60,11 @@ python -m venv .venv
 | 7–8 | Análisis exploratorio: [reports/eda](reports/eda/README.md) | Primera versión |
 | 7–8 | Indicadores: esquema `kpi` con 9 vistas ([db/vistas.sql](db/vistas.sql)) | Listo |
 | 9–10 | Pronóstico de demanda semanal y alertas: [docs/05](docs/05_modelo_demanda.md), [reports/ml](reports/ml/backtest.md) | Listo |
-| 11–12 | API y dashboard | Pendiente |
-| 13–14 | Despliegue, respaldos, monitoreo | Pendiente |
-| 15–16 | Manuales y memoria | Pendiente |
+| 11–12 | API REST (FastAPI, `/docs`) y dashboard (Streamlit, 6 páginas) | Listo |
+| 13–14 | Respaldos verificados, monitoreo, proceso diario, CI y Docker: [docs/06](docs/06_operacion_y_despliegue.md) | Listo |
+| 13–14 | Despliegue en servidor (Railway o VPS) | Pendiente: decisión del equipo |
+| 15–16 | [Manual técnico](docs/manual_tecnico.md) y [manual de usuario](docs/manual_usuario.md) | Primera versión |
+| 15–16 | Memoria de estadía | Pendiente |
 
 ## Datos generados
 

@@ -65,6 +65,20 @@ Excluir las semanas censuradas **empeoró** el sesgo, contra lo que se esperaba.
 | `EXCESO_INVENTARIO` | Cobertura = existencia ÷ demanda diaria pronosticada > 180 días. |
 | `SIN_ROTACION` | Existencia > 0, cero ventas en 13 semanas y pronóstico < 0.25 unidades por semana. |
 
+### ¿Las alertas de desabasto anticipan faltantes reales?
+
+En cada semana del periodo de prueba se aplicó la regla con el pronóstico de ese momento y la existencia al cierre de la semana. Después se revisó si en las **dos semanas siguientes** hubo al menos un día sin existencia. Fueron 60,527 casos con existencia positiva, de los cuales 3,102 (5.1 %) terminaron en faltante.
+
+| Regla | Alertas | Aciertos | Precisión | Exhaustividad | F1 |
+|---|---|---|---|---|---|
+| Modelo, percentil 90 (**publicada**) | 10,359 | 1,677 | 16.2 % | **54.1 %** | 0.249 |
+| Modelo, valor medio | 3,436 | 955 | **27.8 %** | 30.8 % | **0.292** |
+| Promedio de 4 semanas (sin modelo) | 5,019 | 1,029 | 20.5 % | 33.2 % | 0.253 |
+
+- Con el mismo umbral (valor medio), el modelo es **más preciso** que el promedio simple (27.8 % contra 20.5 %) y tiene la mejor F1.
+- La regla publicada usa el percentil 90 a propósito: **anticipa más de la mitad de los faltantes**, a cambio de unas 5 alertas falsas por cada acierto. Para un almacén es preferible revisar alertas de más que quedarse sin producto.
+- El umbral se puede ajustar según el costo relativo de un faltante frente al de revisar una alerta. Es una mejora natural para una siguiente versión.
+
 Las alertas se escriben en `ops.alertas_inventario`; los pronósticos, en `ops.predicciones_demanda`; y la versión del modelo con sus métricas, en `ops.modelos`.
 
 ## Limitaciones
