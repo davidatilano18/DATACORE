@@ -1,0 +1,15 @@
+# Generación y procesamiento de datos
+numpy>=2.0
+pandas>=2.2
+faker>=30
+pyarrow>=17
+matplotlib>=3.9
+openpyxl>=3.1
+
+# Base de datos
+psycopg[binary]>=3.2
+sqlalchemy>=2.0
+python-dotenv>=1.0
+
+# Pruebas
+pytest>=8
