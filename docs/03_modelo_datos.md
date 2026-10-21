@@ -1,6 +1,7 @@
 # 03 · Modelo entidad-relación y diccionario de datos
 
-El DDL completo está en [`db/schema.sql`](../db/schema.sql). Hay dos esquemas:
+El DDL de tablas está en [`db/schema.sql`](../db/schema.sql) y el de indicadores en
+[`db/vistas.sql`](../db/vistas.sql). Los esquemas de origen son:
 
 - **`core`**: datos de negocio ya validados.
 - **`ops`**: operación de la plataforma (ETL, calidad, modelos, predicciones, alertas).
@@ -181,3 +182,51 @@ Foto de la existencia al cierre del periodo, por sucursal y producto.
 | `modelos` | Versiones de modelos entrenados con sus métricas (`JSONB`) y la marca de cuál está activo. |
 | `predicciones_demanda` | Pronóstico semanal por sucursal y producto, con intervalo. |
 | `alertas_inventario` | Alertas `RIESGO_DESABASTO`, `EXCESO_INVENTARIO` y `SIN_ROTACION`, con su cobertura en días. |
+
+## Indicadores (esquema kpi)
+
+Se aplican con `python -m datacore.db_setup`, sin `--reset`. El lector tiene
+USAGE del esquema y SELECT sobre vistas actuales y futuras creadas por el rol app.
+Las ventas se filtran a `completada`; el ingreso diario usa la cabecera, mientras
+que categoría, producto y ABC usan subtotales del detalle para evitar duplicaciones.
+
+| Vista | Qué mide | Columnas clave |
+|---|---|---|
+| `ventas_diarias_sucursal` | Tickets, unidades, ingreso y ticket promedio diario por sucursal. | `fecha`, `id_sucursal`, `codigo`, `tickets`, `unidades`, `ingreso`, `ticket_promedio` |
+| `ventas_mensuales_categoria` | Ingreso y unidades por categoría; participación porcentual dentro del mes. | `mes`, `id_categoria`, `categoria`, `unidades`, `ingreso`, `participacion_pct` |
+| `ventas_semanales_producto` (materializada) | Demanda semanal, únicamente combinaciones con ventas; semana inicia en lunes. | `semana_inicio`, `id_sucursal`, `id_producto`, `unidades`, `ingreso`, `tickets` |
+| `abc_productos` | Pareto histórico por ingreso, incluidos productos sin ventas. | `id_producto`, `sku`, `nombre`, `categoria`, `ingreso`, `pct_acumulado`, `clase` |
+| `cobertura_inventario` | Existencia actual frente a la demanda de los últimos 90 días. | `id_sucursal`, `id_producto`, `existencia`, `stock_minimo`, `stock_maximo`, `unidades_90d`, `venta_diaria_90d`, `cobertura_dias`, `estado` |
+| `desabasto_mensual` (materializada) | Días-par sin existencia al cierre / días-par activos del mes. | `mes`, `id_sucursal`, `pares_activos`, `dias_par_sin_existencia`, `tasa_desabasto` |
+| `incidencias_mensuales` | Reportes por tipo y severidad; pendientes y duración media de los resueltos. | `mes`, `id_sucursal`, `tipo`, `severidad`, `total`, `abiertas`, `dias_promedio_resolucion` |
+| `calidad_ultima_carga` | Hallazgos por regla y acción de todos los procesos con el último `inicio`. | `regla`, `accion`, `conteo` |
+| `resumen_ejecutivo` | Una fila con ventas históricas y recientes, crecimiento, clientes, inventario e incidencias pendientes. | `ingreso_total`, `ingreso_ultimos_12_meses`, `crecimiento_pct`, `tickets`, `ticket_promedio`, `clientes_activos_12_meses`, `pares_sin_existencia`, `pares_exceso`, `pares_sin_rotacion`, `incidencias_abiertas` |
+
+ABC ordena por ingreso descendente y desempata por `id_producto`. A corresponde al
+acumulado incluido el producto ≤80 %, B ≤95 % y C al resto (también ingresos cero).
+El producto que cruza un umbral pasa a la clase inferior; esto difiere del EDA actual,
+que usa el acumulado previo y lo conserva en la clase anterior.
+
+La cobertura usa 90 fechas inclusivas hasta la fecha máxima de `core.ventas`,
+divide las unidades entre 90 y devuelve NULL si no hubo venta. Prevalecen, en orden:
+`sin_existencia`, `sin_rotacion` (existencia positiva sin ventas), `exceso`
+(cobertura >180 días), `bajo_minimo` y `normal`.
+
+Desabasto toma el último `id_movimiento` de cada día y arrastra su
+`existencia_resultante` con `generate_series` hasta el siguiente cierre. Un par
+es activo desde su primer `INVENTARIO_INICIAL`, inclusive, hasta la fecha máxima
+entre movimientos, ventas y foto de inventario. `pares_activos` cuenta productos
+distintos activos al menos un día del mes; la tasa usa los días-par reales,
+incluidos meses parciales. Se materializa por el costo de expandir la historia diaria.
+
+Las ventanas ejecutivas se anclan al día posterior a la última venta: últimos
+12 meses y los 12 meses anteriores, sin solapamiento. Crecimiento es NULL si el
+ingreso anterior es cero; clientes activos excluye público general. Incidencias
+abiertas incluye `abierta` y `en_proceso`; la duración media solo incluye resueltas.
+
+Las dos materializadas tienen índices únicos por sus dimensiones. Para actualizarlas:
+`python -m datacore.db_setup --refrescar` (imprime segundos por vista). El ETL
+llama a `refrescar_vistas(engine)` después de confirmar la carga; el refresco es
+atómico entre las materializadas y un fallo se propaga sin deshacer los datos ya
+confirmados. Las vistas ordinarias se evalúan al consultarlas; ABC lee el agregado
+semanal y refleja su último refresco.

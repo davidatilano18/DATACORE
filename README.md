@@ -27,6 +27,10 @@ python -m venv .venv
 # Análisis exploratorio → reports/eda/
 .venv\Scripts\python -m datacore.eda.reporte
 
+# Pronóstico: evaluar contra baselines y publicar pronósticos y alertas en ops
+.venv\Scripts\python -m datacore.ml evaluar
+.venv\Scripts\python -m datacore.ml publicar
+
 # Pruebas
 .venv\Scripts\python -m pytest -q
 ```
@@ -41,8 +45,8 @@ python -m venv .venv
 | 5–6 | Base de datos y ETL con bitácora en `ops`: [reports/etl/calidad.md](reports/etl/calidad.md) | Listo |
 | 7–8 | Reglas de calidad (18/18 defectos, precisión 100 %) | Listo |
 | 7–8 | Análisis exploratorio: [reports/eda](reports/eda/README.md) | Primera versión |
-| 7–8 | Indicadores (vistas SQL) | Pendiente |
-| 9–10 | Modelo de pronóstico de demanda | Pendiente |
+| 7–8 | Indicadores: esquema `kpi` con 9 vistas ([db/vistas.sql](db/vistas.sql)) | Listo |
+| 9–10 | Pronóstico de demanda semanal y alertas: [docs/05](docs/05_modelo_demanda.md), [reports/ml](reports/ml/backtest.md) | Listo |
 | 11–12 | API y dashboard | Pendiente |
 | 13–14 | Despliegue, respaldos, monitoreo | Pendiente |
 | 15–16 | Manuales y memoria | Pendiente |

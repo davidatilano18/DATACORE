@@ -32,7 +32,8 @@ src/datacore/generator/  listo: catálogos, demanda, inventario, incidencias, de
 src/datacore/etl/        listo: extracción, limpieza, reglas de calidad, carga a PostgreSQL (python -m datacore.etl --evaluar)
 src/datacore/eda/        listo: reporte exploratorio en reports/eda/
 src/datacore/db.py       conexión (roles admin / app / lector desde .env; nunca imprimas .env)
-src/datacore/ml/         pendiente: pronóstico semanal de demanda y alertas
+src/datacore/ml/         listo: pronóstico semanal (GBM Poisson por horizonte), backtest, alertas (docs/05)
+db/vistas.sql            esquema kpi (indicadores); se refresca al final de cada ETL
 src/datacore/api/        pendiente: FastAPI
 src/datacore/dashboard/  pendiente: Streamlit
 db/schema.sql            DDL de PostgreSQL (esquemas core y ops)

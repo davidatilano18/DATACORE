@@ -5,6 +5,8 @@
 
 CREATE SCHEMA IF NOT EXISTS core;
 CREATE SCHEMA IF NOT EXISTS ops;
+-- Indicadores derivados y materializados: se aplican después desde db/vistas.sql.
+CREATE SCHEMA IF NOT EXISTS kpi;
 
 -- =========================================================================
 -- core: catálogos

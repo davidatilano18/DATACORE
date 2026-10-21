@@ -3,6 +3,8 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+# Temporales que deja el sandbox de Codex.
+.tmp*/
 
 # Los datos se regeneran con el generador (misma semilla = mismos datos).
 data/
