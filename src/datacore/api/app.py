@@ -173,9 +173,16 @@ def ventas_por_sucursal(desde: date | None = None, hasta: date | None = None, en
 
 
 @app.get("/ventas/categorias", tags=["ventas"], dependencies=protegido, summary="Ventas mensuales por categoría")
-def ventas_por_categoria(desde: date | None = None, hasta: date | None = None, eng=Depends(lector)):
-    where, p = filtros(**{"mes >=": desde, "mes <=": hasta})
-    return filas(eng, f"SELECT * FROM kpi.ventas_mensuales_categoria {where} ORDER BY mes, categoria", **p)
+def ventas_por_categoria(desde: date | None = None, hasta: date | None = None,
+                         id_sucursal: int | None = None, eng=Depends(lector)):
+    where, p = filtros(**{"v.fecha_hora::date >=": desde, "v.fecha_hora::date <=": hasta,
+                          "v.id_sucursal": id_sucursal, "v.estatus": "completada"})
+    return filas(eng, f"""SELECT date_trunc('month', v.fecha_hora)::date AS mes,
+                          c.nombre AS categoria, sum(d.subtotal) AS ingreso
+                          FROM core.ventas v JOIN core.detalle_venta d USING (id_venta)
+                          JOIN core.productos p USING (id_producto)
+                          JOIN core.categorias c USING (id_categoria)
+                          {where} GROUP BY 1, 2 ORDER BY 1, 2""", **p)
 
 
 @app.get("/ventas/semanales", tags=["ventas"], dependencies=protegido,
@@ -297,3 +304,51 @@ def anomalias(id_sucursal: int | None = None, desde: date | None = None, hasta: 
     return filas(eng, f"""SELECT a.*, s.codigo AS sucursal FROM ops.anomalias a
                           JOIN core.sucursales s USING (id_sucursal)
                           {where} ORDER BY a.fecha, a.id_sucursal, a.metrica""", **p)
+
+
+@app.get("/operacion/monitoreo", tags=["operación"], dependencies=protegido)
+def monitoreo(limite: Limite = 50, componente: str | None = None, eng=Depends(lector)):
+    where, p = filtros(componente=componente)
+    return filas(eng, f"SELECT * FROM ops.monitoreo {where} ORDER BY revisado_en DESC, id_chequeo DESC LIMIT :l", l=limite, **p)
+
+
+@app.get("/operacion/respaldos", tags=["operación"], dependencies=protegido)
+def respaldos(limite: Limite = 20, eng=Depends(lector)):
+    where, p = filtros()
+    return filas(eng, f"SELECT * FROM ops.respaldos {where} ORDER BY inicio DESC LIMIT :l", l=limite, **p)
+
+
+@app.get("/operacion/corridas", tags=["operación"], dependencies=protegido)
+def corridas(limite: Limite = 20, eng=Depends(lector)):
+    where, p = filtros(proceso="diario")
+    return filas(eng, f"SELECT * FROM ops.corridas {where} ORDER BY inicio DESC LIMIT :l", l=limite, **p)
+
+
+@app.get("/incidencias/abiertas", tags=["operación"], dependencies=protegido)
+def incidencias_abiertas(id_sucursal: int | None = None, limite: Limite = 500, eng=Depends(lector)):
+    where, p = filtros(**{"i.id_sucursal": id_sucursal, "i.estatus !=": "resuelta"})
+    return filas(eng, f"""SELECT i.*, s.codigo AS sucursal FROM core.incidencias i
+                          JOIN core.sucursales s USING (id_sucursal)
+                          {where} ORDER BY fecha_reporte DESC LIMIT :l""", l=limite, **p)
+
+@app.get("/pronosticos/resumen", tags=["pronóstico"], dependencies=protegido)
+def resumen_pronostico(id_producto: int, eng=Depends(lector)):
+    """Total de cuatro semanas e intervalo normal aproximado, con independencia temporal."""
+    where, p = filtros(**{"f.id_producto": id_producto, "m.activo": True})
+    detalle = filas(eng, f"""SELECT f.semana_inicio, f.demanda_estimada,
+                            m.metricas -> 'dispersion_nb' AS dispersion
+                            FROM ops.predicciones_demanda f JOIN ops.modelos m USING (id_modelo)
+                            {where} ORDER BY f.semana_inicio""", **p)
+    semanas = sorted({d['semana_inicio'] for d in detalle})
+    media, varianza = 0.0, 0.0
+    for h, semana in enumerate(semanas, start=1):
+        for d in detalle:
+            if d['semana_inicio'] != semana:
+                continue
+            mu = d['demanda_estimada']
+            k = float((d['dispersion'] or {}).get(f'h{h}') or 1.0)
+            media += mu
+            varianza += mu + mu * mu / k
+    amplitud = Z_80 * math.sqrt(varianza)
+    return {'demanda_estimada': round(media, 2), 'limite_inferior': round(max(0, media-amplitud), 2),
+            'limite_superior': round(media+amplitud, 2), 'semanas': len(semanas)}

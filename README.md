@@ -1,3 +1,5 @@
+<p align="center"><img src="branding/datacore_logotipo.svg" alt="DATACORE · Inteligencia de datos" width="460"></p>
+
 # DATACORE
 
 [![CI](https://github.com/davidatilano18/DATACORE/actions/workflows/ci.yml/badge.svg)](https://github.com/davidatilano18/DATACORE/actions/workflows/ci.yml)

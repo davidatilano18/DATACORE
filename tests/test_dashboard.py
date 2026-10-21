@@ -62,7 +62,7 @@ def api_disponible():
 
 @pytest.mark.parametrize('archivo,titulo,elemento', [
     ('Inicio.py', 'Resumen ejecutivo', 'markdown'),
-    ('pages/1_Ventas.py', 'Ventas', 'date_input'),
+    ('pages/1_Ventas.py', 'Ventas', 'radio'),
     ('pages/2_Inventario.py', 'Inventario', 'dataframe'),
     ('pages/3_Alertas.py', 'Alertas', 'selectbox'),
     ('pages/4_Pronóstico.py', 'Pronóstico', 'text_input'),
@@ -78,3 +78,27 @@ def test_paginas_api_real(api_disponible, archivo, titulo, elemento):
         tarjetas = sum(m.value.count('class="dc-tarjeta"') for m in aplicacion.markdown)
         assert tarjetas == 8  # 4 de negocio + 4 de salud del inventario
     assert any('empresa ficticia' in texto.value for texto in aplicacion.caption)
+
+@pytest.mark.parametrize('archivo,tarjetas,graficas', [
+    ('pages/1_Ventas.py', 4, 4), ('pages/2_Inventario.py', 5, 2),
+    ('pages/3_Alertas.py', 3, 1), ('pages/4_Pronóstico.py', 4, 3),
+])
+def test_componentes_del_sistema_visual(api_disponible, archivo, tarjetas, graficas):
+    aplicacion = AppTest.from_file(str(RAIZ / 'src/datacore/dashboard' / archivo)).run(timeout=60)
+    assert not aplicacion.exception and not aplicacion.error
+    assert sum(m.value.count('class="dc-tarjeta"') for m in aplicacion.markdown) == tarjetas
+    assert len(aplicacion.get('plotly_chart')) >= graficas
+    if 'Alertas' in archivo:
+        assert aplicacion.button[0].label == 'Marcar como atendidas'
+        assert aplicacion.button[0].disabled
+    if 'Ventas' in archivo:
+        aplicacion.radio[0].set_value('Personalizado').run(timeout=60)
+        assert len(aplicacion.date_input) == 1
+        assert not aplicacion.exception and not aplicacion.error
+
+
+def test_pestanas_calidad(api_disponible):
+    aplicacion = AppTest.from_file(str(RAIZ / 'src/datacore/dashboard/pages/5_Calidad_y_operación.py')).run(timeout=60)
+    assert not aplicacion.exception and not aplicacion.error
+    assert [t.label for t in aplicacion.tabs] == ['Calidad de datos', 'Anomalías', 'Incidencias', 'Plataforma']
+    assert any('Últimos respaldos' in m.value for m in aplicacion.markdown)

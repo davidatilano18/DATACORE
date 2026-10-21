@@ -71,3 +71,11 @@ Variables necesarias: `PG_HOST`, `PG_PORT`, `PG_DB`, `PG_APP_USER`, `PG_APP_PASS
 7. Probar `/salud` y el dashboard; correr `monitoreo` contra las URL públicas.
 
 Alternativa: un VPS (por ejemplo Contabo) con Docker o con systemd, usando `deploy/linux/datacore.cron`.
+
+El dashboard expone las bitácoras mediante las rutas protegidas `/operacion/monitoreo`,
+`/operacion/respaldos`, `/operacion/corridas` e `/incidencias/abiertas`, con límite de filas validado.
+La mezcla de categorías admite sucursal y fechas exactas. `/pronosticos/resumen` publica el total
+esperado de cuatro semanas y un intervalo normal aproximado del 80 %, sumando las varianzas
+binomiales negativas bajo independencia entre pares y semanas. Esta hipótesis puede subestimar
+la incertidumbre si los errores temporales están correlacionados; no sustituye una calibración
+conjunta de los cuatro horizontes.

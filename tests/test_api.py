@@ -94,3 +94,37 @@ def test_clave_api(monkeypatch):
 
 def test_atender_alerta_inexistente(cliente):
     assert cliente.post("/alertas/999999999/atender").status_code == 404
+
+@pytest.mark.parametrize('ruta', ['/operacion/monitoreo', '/operacion/respaldos', '/operacion/corridas', '/incidencias/abiertas'])
+def test_rutas_operacion(cliente, ruta):
+    respuesta = cliente.get(ruta, params={'limite': 5})
+    assert respuesta.status_code == 200
+    assert isinstance(respuesta.json(), list)
+    assert len(respuesta.json()) <= 5
+    assert cliente.get(ruta, params={'limite': 0}).status_code == 422
+
+
+def test_categorias_sucursal_y_periodo(cliente):
+    parametros = {'desde': '2025-12-01', 'hasta': '2025-12-31'}
+    total = cliente.get('/ventas/categorias', params=parametros).json()
+    partes = [cliente.get('/ventas/categorias', params={**parametros, 'id_sucursal': s['id_sucursal']}).json()
+              for s in cliente.get('/catalogos/sucursales').json()]
+    assert abs(sum(r['ingreso'] for r in total)-sum(r['ingreso'] for parte in partes for r in parte)) < 0.1
+    assert cliente.get('/ventas/categorias', params={**parametros, 'id_sucursal': -1}).json() == []
+
+
+def test_intervalo_cuatro_semanas(cliente):
+    producto = cliente.get('/catalogos/productos', params={'limite': 1}).json()[0]['id_producto']
+    resumen = cliente.get('/pronosticos/resumen', params={'id_producto': producto}).json()
+    semanas = cliente.get('/pronosticos', params={'id_producto': producto}).json()
+    assert resumen['semanas'] == 4
+    assert abs(resumen['demanda_estimada']-sum(s['demanda_estimada'] for s in semanas)) < 0.05
+    assert resumen['limite_inferior'] <= resumen['demanda_estimada'] <= resumen['limite_superior']
+
+@pytest.mark.parametrize('ruta', ['/operacion/monitoreo', '/operacion/respaldos', '/operacion/corridas', '/incidencias/abiertas', '/pronosticos/resumen?id_producto=1'])
+def test_rutas_nuevas_protegidas(monkeypatch, ruta):
+    from datacore.api.app import app
+    monkeypatch.setenv('DATACORE_API_KEY', 'prueba')
+    with TestClient(app) as cliente:
+        assert cliente.get(ruta).status_code == 401
+        assert cliente.get(ruta, headers={'X-API-Key': 'prueba'}).status_code == 200
