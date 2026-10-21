@@ -13,6 +13,21 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not _OK, reason="sin base de datos con tablas de operación")
 
+TABLAS_BITACORA = {"ops.respaldos": "id_respaldo", "ops.monitoreo": "id_chequeo"}
+
+
+@pytest.fixture(autouse=True)
+def no_ensuciar_bitacoras():
+    """Las pruebas corren contra la base real: borran al final lo que agregaron a las bitácoras
+    de operación, para que el dashboard no muestre respaldos o chequeos de prueba."""
+    with engine("app").connect() as c:
+        antes = {t: c.execute(text(f"SELECT coalesce(max({col}), 0) FROM {t}")).scalar()
+                 for t, col in TABLAS_BITACORA.items()}
+    yield
+    with engine("app").begin() as c:
+        for t, col in TABLAS_BITACORA.items():
+            c.execute(text(f"DELETE FROM {t} WHERE {col} > :m"), {"m": antes[t]})
+
 
 def test_respaldo_y_recuperacion(tmp_path, monkeypatch):
     from datacore.operacion import respaldo
