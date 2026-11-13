@@ -41,7 +41,7 @@ El esquema se amplió con las columnas nivel_objetivo, cantidad_sugerida y fecha
 
 Al repetir la simulación de la mejora 1 con una política que solo pide cuando salta la alerta, el nivel de servicio cayó a 89.4 %. La alerta se optimizó para avisar con el mejor equilibrio entre aciertos y falsas alarmas, por lo que su umbral no lleva colchón; usada como punto de reorden, el pedido llega tarde. La conclusión se incorporó al diseño: la alerta prioriza qué revisar y el nivel objetivo decide cuánto pedir.
 
-### 4.1.15 Mejora 4: explicar cada alerta, rediseño y preparación del despliegue
+### 4.1.15 Mejora 4: explicar cada alerta, rediseño y despliegue
 
 Cada alerta incluye ahora sus dos o tres factores principales en lenguaje sencillo, en la columna motivos. El módulo ml/explicaciones.py aplica reglas transparentes sobre las mismas cantidades con las que se decide la alerta: cuántos días alcanza la existencia contra los días de entrega, la tendencia frente a las últimas ocho semanas, los eventos de calendario próximos, la temporada alta de la categoría, los días que el producto estuvo agotado y la lentitud del proveedor. Cada regla aporta un factor con un puntaje de gravedad y se conservan los de mayor puntaje. Un ejemplo real: "La existencia alcanza para 5 días y un pedido tarda 7 días; se acerca el fin de año; estuvo agotado 4 de los últimos 28 días: vendió menos de lo que se le pidió".
 
@@ -49,4 +49,16 @@ Se prefirieron reglas a la atribución del modelo, como SHAP, por tres razones: 
 
 El dashboard se rediseñó para dejar de verse como una aplicación genérica: barra lateral marino con el logotipo, encabezado tipo folio con el sello del corte de datos, tipografía IBM Plex Sans alojada en el proyecto, indicadores en franjas y bloques por tema. En la página de Inicio se agregaron una barra de salud del inventario y un mapa de la red de doce sucursales, en el que el tamaño de cada punto representa su ingreso y un anillo rojo marca las tres con más alertas pendientes (Figuras 4.14 a 4.19). Los datos, los indicadores y la API no cambiaron.
 
-Por último, se preparó el despliegue. El equipo eligió Azure for Students, que ofrece crédito para estudiantes sin necesidad de tarjeta de crédito. La revisión de la imagen Docker encontró dos problemas que habrían impedido el despliegue: la imagen no incluía el logotipo y el proceso diario dependía de archivos de datos que no viajan en la imagen. Se corrigieron copiando el logotipo y haciendo que el proceso genere los datos simulados cuando no existen. Además, se agregó un servicio de carga inicial y se midió el pico de memoria del reentrenamiento, cercano a 1.2 GB, para dimensionar la tarea diaria en 2 GB. El plan de recursos, pasos y riesgos quedó documentado en docs/06; su ejecución es el siguiente paso del proyecto.
+Por último, se desplegó la plataforma. La revisión previa de la imagen Docker encontró dos problemas que habrían impedido el despliegue: la imagen no incluía el logotipo y el proceso diario dependía de archivos de datos que no viajan en la imagen. Se corrigieron copiando el logotipo y haciendo que el proceso genere los datos simulados cuando no existen, y se agregó un servicio de carga inicial. El equipo eligió primero Azure for Students, pero su verificación de estudiante falló de forma repetida, por lo que se desplegó en Railway, en un proyecto propio separado de los demás del equipo.
+
+La Tabla 4.18 resume los servicios en producción. Los tres servicios de la aplicación usan la misma imagen; la variable SERVICIO decide qué arranca. La conexión con la base usa la red privada de Railway y las contraseñas se generan fuera del repositorio. El script deploy/railway/desplegar.sh repite todo el despliegue paso a paso.
+
+[TABLA] Servicios de DATACORE en producción (Railway)
+| Servicio | Función | Acceso |
+| datacore-dashboard | Dashboard de Streamlit con las seis páginas. | Público: https://datacore-dashboard-production.up.railway.app |
+| datacore-api | API REST; todas las rutas, salvo /salud, piden la clave de acceso. | Público con clave |
+| datacore-diario | Proceso diario: respaldo y su verificación, datos, ETL, modelo, anomalías y monitoreo. | Tarea programada a las 2:00 (Centro de México) |
+| Postgres | PostgreSQL 18 administrado, con volumen persistente. | Red privada |
+[NOTA] Elaboración propia con base en docs/06_operacion_y_despliegue.md.
+
+La carga inicial en la nube tardó unos siete minutos, 5.7 de ellos en el entrenamiento del modelo, y produjo las mismas cifras que en el equipo de desarrollo: 279 alertas de desabasto, 462 de exceso, 152 sin rotación y 13,334 unidades de pedido sugerido. Antes de programar la tarea diaria se ejecutó una corrida completa a mano. El despliegue también encontró tres problemas que las pruebas locales no veían. Railway usa PostgreSQL 18 y la herramienta de respaldo de la imagen era de una versión anterior, que no puede respaldar un servidor más nuevo; se instaló el cliente de PostgreSQL 18. El mapa de la red no se instalaba con el paquete y la página de Inicio fallaba; se declararon los archivos de datos del dashboard en la configuración del paquete. Por último, el dashboard buscaba el logotipo a partir de la ubicación de su código, que dentro de la imagen es otra; ahora toma la raíz del proyecto de la misma variable que usa la conexión a la base.

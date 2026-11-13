@@ -10,6 +10,7 @@ Reglas (guía de visualización del proyecto):
   úsalos con etiquetas visibles o tabla.
 """
 
+import os
 from html import escape
 from pathlib import Path
 
@@ -17,7 +18,8 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
 
-RAIZ = Path(__file__).resolve().parents[3]
+# Igual que en db.py: dentro de la imagen el paquete vive en site-packages y la raíz la da DATACORE_ROOT (/app).
+RAIZ = Path(os.getenv("DATACORE_ROOT", Path(__file__).resolve().parents[3]))
 MARCA = RAIZ / "branding" / "png"
 
 # --- marca ----------------------------------------------------------------------

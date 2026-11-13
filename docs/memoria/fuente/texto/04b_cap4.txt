@@ -181,7 +181,7 @@ Durante la revisión de esta etapa se encontró un error importante. Las tablas 
 
 La integración continua se configuró en GitHub Actions y se ejecuta con cada cambio a la rama principal. Levanta PostgreSQL 16 como servicio, genera un conjunto de datos reducido de 120 productos y 1,500 clientes, ejecuta el ETL con su evaluación y la publicación del modelo, levanta la API y corre todas las pruebas. Después prueba el respaldo con su restauración y el monitoreo, construye la imagen Docker, la arranca contra la misma base y consulta sus rutas. Al final publica el reporte de calidad y las bitácoras como evidencia.
 
-El despliegue se preparó durante la etapa de mejoras: el equipo eligió Azure for Students y se corrigió la imagen para que funcione en un servidor nuevo (sección 4.1.15). Como alternativa se documentó un servidor privado virtual con Docker o con el archivo cron de Linux.
+El despliegue en producción se realizó durante la etapa de mejoras, en Railway (sección 4.1.15). Como alternativa se documentó un servidor privado virtual con Docker o con el archivo cron de Linux.
 
 ### 4.1.10 Pruebas del sistema
 

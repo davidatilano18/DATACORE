@@ -43,8 +43,9 @@ db/schema.sql            DDL de PostgreSQL (esquemas core y ops)
 
 ## Restricciones del equipo
 
-- **No ejecutes comandos de Railway** (`railway up/link/init/...`): la cuenta aloja otro proyecto del equipo.
-  El despliegue lo decide el equipo; ver docs/06.
+- **Railway:** DATACORE vive en su propio proyecto `datacore` (desplegado con `deploy/railway/desplegar.sh`; ver docs/06).
+  La cuenta tiene otro proyecto del equipo: **nunca** enlaces, modifiques ni borres un proyecto distinto de `datacore`.
+  Antes de un comando de Railway que cambie algo, confirma con `railway status` que el enlazado es `datacore`.
 
 ## Cómo trabajar una tarea
 

@@ -2,7 +2,7 @@
 
 ### 4.2.1 Resumen de resultados
 
-Todos los componentes de la plataforma se evaluaron contra la verdad de referencia del simulador o contra métodos de referencia. La Tabla 4.18 resume los resultados principales; las secciones siguientes los analizan uno por uno. Las cifras corresponden a la semilla 42 y se pueden reproducir con los comandos del manual técnico.
+Todos los componentes de la plataforma se evaluaron contra la verdad de referencia del simulador o contra métodos de referencia. La Tabla 4.19 resume los resultados principales; las secciones siguientes los analizan uno por uno. Las cifras corresponden a la semilla 42 y se pueden reproducir con los comandos del manual técnico.
 
 [TABLA] Resumen de resultados por componente
 | Componente | Resultado | Evidencia |
@@ -13,11 +13,12 @@ Todos los componentes de la plataforma se evaluaron contra la verdad de referenc
 | Detección de anomalías | F1 de 0.335; detecta 49.6 % de las fallas de 6 a 8 horas. | reports/ml/anomalias.md |
 | Respaldos | 16 MB en 3 s; la restauración de 1,525,992 filas cuadró al 100 % en 12 s. | ops.respaldos |
 | Pruebas | 116 pruebas automatizadas aprobadas. | GitHub Actions |
+| Despliegue | Dashboard público, API, PostgreSQL y proceso diario en Railway; mismas cifras que en local. | docs/06_operacion_y_despliegue.md |
 [NOTA] Elaboración propia.
 
 ### 4.2.2 Calidad de los datos
 
-El ETL detectó los 18 tipos de defecto inyectados (Tabla 4.19). En 17 de ellos la exhaustividad fue de 100 %: se encontraron todos los registros defectuosos. La única excepción fue el correo electrónico inválido, con 72 de 74 casos (97.3 %); los dos restantes son correos del dominio yahoo.com.mx capturados como yahoo.con.mx. La regla corrige la terminación .con al final del correo, pero esta variante queda en medio del dominio y tiene una sintaxis válida, por lo que pasa la validación. Extender la corrección a esa variante es una mejora sencilla para una siguiente versión. La precisión fue de 100 % en todas las reglas: ninguna marcó como defectuoso un registro sano.
+El ETL detectó los 18 tipos de defecto inyectados (Tabla 4.20). En 17 de ellos la exhaustividad fue de 100 %: se encontraron todos los registros defectuosos. La única excepción fue el correo electrónico inválido, con 72 de 74 casos (97.3 %); los dos restantes son correos del dominio yahoo.com.mx capturados como yahoo.con.mx. La regla corrige la terminación .con al final del correo, pero esta variante queda en medio del dominio y tiene una sintaxis válida, por lo que pasa la validación. Extender la corrección a esa variante es una mejora sencilla para una siguiente versión. La precisión fue de 100 % en todas las reglas: ninguna marcó como defectuoso un registro sano.
 
 [TABLA] Detección de los defectos inyectados por tipo
 | Defecto | Inyectados | Detectados | Exhaustividad | Precisión |
@@ -41,7 +42,7 @@ El ETL detectó los 18 tipos de defecto inyectados (Tabla 4.19). En 17 de ellos 
 | producto_costo_mayor_precio | 4 | 4 | 100.0 % | 100.0 % |
 [NOTA] Elaboración propia con base en reports/etl/calidad.md.
 
-Detectar un defecto no basta; también importa qué tan cerca quedan los datos limpios de los originales. La Tabla 4.20 muestra la carga por tabla. Los registros descartados corresponden a duplicados exactos, renglones con productos inexistentes y los clientes casi duplicados que se fusionaron con su registro original.
+Detectar un defecto no basta; también importa qué tan cerca quedan los datos limpios de los originales. La Tabla 4.21 muestra la carga por tabla. Los registros descartados corresponden a duplicados exactos, renglones con productos inexistentes y los clientes casi duplicados que se fusionaron con su registro original.
 
 [TABLA] Carga de datos por tabla
 | Tabla | Leídas | Cargadas | Descartadas |
@@ -68,7 +69,7 @@ La Figura 4.21 compara el WAPE por producto y semana del modelo contra los cuatr
 
 El modelo fue el mejor método en los 12 casos evaluados: 4 bloques de 13 semanas por 3 horizontes. Su ventaja sobre la media móvil, el mejor de los métodos de referencia, va de 0.6 puntos en el bloque de abril a junio con horizonte de una semana, a 4.4 puntos en el bloque de octubre a diciembre con horizonte de cuatro semanas. La ventaja crece justo en la temporada de Buen Fin y Navidad, cuando el calendario más pesa y los métodos que solo miran el pasado reciente se quedan atrás. Pronosticar a cuatro semanas en lugar de una sube el error del modelo apenas 0.3 puntos, mientras que el de la media móvil sube 1.4 puntos. El sesgo del modelo se mantuvo entre −1.4 % y −1.1 %, es decir, prácticamente sin tendencia a quedarse corto ni a pasarse.
 
-El error depende mucho de la clase ABC del producto (Tabla 4.21). En los productos de clase A, que generan 80 % del ingreso, el WAPE por par sucursal-producto es de 58.7 %; en los de clase C, que venden pocas unidades de forma muy irregular, supera 100 %. Este comportamiento es normal en demanda intermitente: cuando un par vende una o dos unidades al mes, cualquier diferencia es grande en términos relativos. En todas las clases el modelo es el mejor método. La consecuencia práctica es que las alertas deben basarse en intervalos y no solo en el valor puntual.
+El error depende mucho de la clase ABC del producto (Tabla 4.22). En los productos de clase A, que generan 80 % del ingreso, el WAPE por par sucursal-producto es de 58.7 %; en los de clase C, que venden pocas unidades de forma muy irregular, supera 100 %. Este comportamiento es normal en demanda intermitente: cuando un par vende una o dos unidades al mes, cualquier diferencia es grande en términos relativos. En todas las clases el modelo es el mejor método. La consecuencia práctica es que las alertas deben basarse en intervalos y no solo en el valor puntual.
 
 [TABLA] WAPE por par sucursal-producto y semana según la clase ABC (horizonte de una semana)
 | Método | Clase A | Clase B | Clase C | Todos los pares |
@@ -79,7 +80,7 @@ El error depende mucho de la clase ABC del producto (Tabla 4.21). En los product
 | Estacional | 85.1 % | 106.1 % | 129.0 % | 100.9 % |
 [NOTA] Elaboración propia con base en reports/ml/backtest.md.
 
-Gracias a que el simulador registra la demanda no surtida, fue posible medir el modelo contra la demanda real y no solo contra las ventas. Contra la demanda real, el sesgo del modelo es de −6.2 % por par: la mayor parte de la demanda perdida por faltantes no se ve en ninguna venta y, por lo tanto, ningún modelo entrenado con ventas puede recuperarla por completo. Se probó la estrategia habitual de excluir del entrenamiento las semanas con tres o más días sin existencia, y el resultado fue contrario a lo esperado: el sesgo contra la demanda real empeoró de −6.4 % a −9.2 % por producto y semana (Tabla 4.22). La explicación más plausible es que las variables de disponibilidad ya le indican al modelo cuándo la venta estuvo limitada, y al quitar esas semanas se pierde justo la información que le permite aprenderlo. Por esta razón, el modelo publicado se entrena con todas las semanas.
+Gracias a que el simulador registra la demanda no surtida, fue posible medir el modelo contra la demanda real y no solo contra las ventas. Contra la demanda real, el sesgo del modelo es de −6.2 % por par: la mayor parte de la demanda perdida por faltantes no se ve en ninguna venta y, por lo tanto, ningún modelo entrenado con ventas puede recuperarla por completo. Se probó la estrategia habitual de excluir del entrenamiento las semanas con tres o más días sin existencia, y el resultado fue contrario a lo esperado: el sesgo contra la demanda real empeoró de −6.4 % a −9.2 % por producto y semana (Tabla 4.23). La explicación más plausible es que las variables de disponibilidad ya le indican al modelo cuándo la venta estuvo limitada, y al quitar esas semanas se pierde justo la información que le permite aprenderlo. Por esta razón, el modelo publicado se entrena con todas las semanas.
 
 [TABLA] Efecto de excluir las semanas censuradas (producto-semana, horizonte de una semana)
 | Variante del modelo | WAPE contra demanda real | Sesgo contra demanda real |
@@ -89,7 +90,7 @@ Gracias a que el simulador registra la demanda no surtida, fue posible medir el 
 
 ### 4.2.4 Alertas de desabasto (regla original)
 
-Para saber si las alertas anticipan faltantes reales, se aplicó la regla cada semana del periodo de prueba con el pronóstico disponible en ese momento y la existencia al cierre de la semana, y se revisó si en las dos semanas siguientes hubo al menos un día sin existencia. Fueron 60,527 casos con existencia positiva, de los cuales 3,102 (5.1 %) terminaron en faltante. La Tabla 4.23 compara la regla publicada con dos alternativas.
+Para saber si las alertas anticipan faltantes reales, se aplicó la regla cada semana del periodo de prueba con el pronóstico disponible en ese momento y la existencia al cierre de la semana, y se revisó si en las dos semanas siguientes hubo al menos un día sin existencia. Fueron 60,527 casos con existencia positiva, de los cuales 3,102 (5.1 %) terminaron en faltante. La Tabla 4.24 compara la regla publicada con dos alternativas.
 
 [TABLA] Evaluación de las reglas de alerta de desabasto
 | Regla | Alertas | Aciertos | Precisión | Exhaustividad | F1 |
@@ -105,7 +106,7 @@ La Figura 4.22 ubica las tres reglas según su precisión y su exhaustividad. Co
 
 ### 4.2.5 Detección de anomalías
 
-El detector de anomalías se evaluó contra los 325 días-sucursal en que el punto de venta estuvo caído, información que el simulador registra pero que el detector nunca lee (Tabla 4.24).
+El detector de anomalías se evaluó contra los 325 días-sucursal en que el punto de venta estuvo caído, información que el simulador registra pero que el detector nunca lee (Tabla 4.25).
 
 [TABLA] Evaluación del detector de anomalías
 | Detector | Umbral | Precisión | Exhaustividad | F1 |
@@ -125,7 +126,7 @@ El respaldo de la base completa pesa 16 MB y se genera en unos 3 segundos. La pr
 
 ### 4.2.7 Cumplimiento de los requerimientos
 
-La Tabla 4.25 resume el estado de cada requerimiento funcional al cierre del proyecto.
+La Tabla 4.26 resume el estado de cada requerimiento funcional al cierre del proyecto.
 
 [TABLA] Cumplimiento de los requerimientos funcionales
 | ID | Requerimiento | Estado | Evidencia |
@@ -144,11 +145,11 @@ La Tabla 4.25 resume el estado de cada requerimiento funcional al cierre del pro
 | RF-13 | Detección de anomalías | Cumplido | F1 de 0.335. |
 [NOTA] Elaboración propia.
 
-Los requerimientos no funcionales también se cumplieron: la semilla reproduce los mismos datos (RNF-01); el ETL tarda unos 50 segundos frente al límite de 10 minutos (RNF-02); cada hallazgo guarda su tabla y llave de origen (RNF-03); el ETL es idempotente (RNF-04); se reportan precisión y exhaustividad (RNF-05); las credenciales viven en un archivo fuera del control de versiones y la API consulta con un rol de solo lectura (RNF-06); hay 116 pruebas automatizadas y documentación al día (RNF-07), y la plataforma se ejecuta en Windows y en el contenedor Linux de la integración continua (RNF-08).
+Los requerimientos no funcionales también se cumplieron: la semilla reproduce los mismos datos (RNF-01); el ETL tarda unos 50 segundos frente al límite de 10 minutos (RNF-02); cada hallazgo guarda su tabla y llave de origen (RNF-03); el ETL es idempotente (RNF-04); se reportan precisión y exhaustividad (RNF-05); las credenciales viven en un archivo fuera del control de versiones y la API consulta con un rol de solo lectura (RNF-06); hay 116 pruebas automatizadas y documentación al día (RNF-07), y la plataforma se ejecuta en Windows, en el contenedor Linux de la integración continua y en producción en Railway (RNF-08).
 
 ### 4.2.8 Impacto económico de DATACORE
 
-La Tabla 4.26 compara, sobre la misma demanda real de 2025, la política actual de NexaTech con la reposición guiada por DATACORE al cuantil calibrado en 2024 (sección 4.1.12).
+La Tabla 4.27 compara, sobre la misma demanda real de 2025, la política actual de NexaTech con la reposición guiada por DATACORE al cuantil calibrado en 2024 (sección 4.1.12).
 
 [TABLA] Impacto de DATACORE contra la política actual (2025)
 | Concepto | Política actual | DATACORE (p99) | Diferencia |
@@ -172,7 +173,7 @@ El resultado tiene límites que conviene declarar. Los pronósticos se calcularo
 
 ### 4.2.9 Alertas de desabasto mejoradas
 
-La Tabla 4.27 resume la evaluación de las reglas de alerta en los cuatro trimestres de 2025. Ninguno de ellos participó en la elección de la regla.
+La Tabla 4.28 resume la evaluación de las reglas de alerta en los cuatro trimestres de 2025. Ninguno de ellos participó en la elección de la regla.
 
 [TABLA] Reglas de alerta de desabasto evaluadas fuera de muestra (2025)
 | Regla | Alertas | Aciertos | Precisión | Exhaustividad | F1 |

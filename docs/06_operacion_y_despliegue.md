@@ -59,11 +59,56 @@ Un solo `Dockerfile`; la variable `SERVICIO` elige qué arranca:
 
 Variables necesarias: `PG_HOST`, `PG_PORT`, `PG_DB`, `PG_APP_USER`, `PG_APP_PASSWORD`, `PG_LECTOR_USER`, `PG_LECTOR_PASSWORD` (y `PG_ADMIN_*` solo para `db_setup` y la verificación de respaldos). Opcionales: `DATACORE_API_KEY`, `DATACORE_CORS`, y en el dashboard `DATACORE_API_URL`.
 
-## Plan de despliegue en Azure for Students (elegido, no ejecutado)
+## Despliegue en producción: Railway (13 de noviembre de 2026)
 
-> **No se ha desplegado nada.** El equipo eligió esta opción en la Fase 5 de mejoras (noviembre de 2026). La cuenta
-> de Railway del equipo **no se usa**: aloja otro proyecto escolar. Los precios y créditos se consultaron en fuentes de
-> terceros y deben confirmarse en el portal de Azure antes de crear recursos.
+DATACORE está desplegado en su **propio proyecto de Railway** (`datacore`), separado del otro proyecto que tiene la
+cuenta del equipo.
+
+| Servicio | Qué corre | Liga |
+|---|---|---|
+| `datacore-dashboard` | `SERVICIO=dashboard` | https://datacore-dashboard-production.up.railway.app |
+| `datacore-api` | `SERVICIO=api`, protegida con `X-API-Key` (salvo `/salud`) | https://datacore-api-production.up.railway.app |
+| `datacore-diario` | `SERVICIO=diario`, tarea programada `0 8 * * *` (2:00 en el Centro de México), sin reinicio | — |
+| `Postgres` | PostgreSQL 18 administrado por Railway, con volumen persistente | red privada |
+
+**Cómo se desplegó** (`deploy/railway/desplegar.sh`, repetible):
+
+1. `railway init --name datacore` y `railway add --database postgres`.
+2. `desplegar.sh servicios`: crea los tres servicios y sus variables. La conexión usa la red privada
+   (`${{Postgres.PGHOST}}`); el administrador es el usuario del servicio Postgres. Las contraseñas de los roles
+   `datacore_app` y `datacore_lector` y la clave de la API se generan en `deploy/railway/secretos.env`, que no se versiona.
+3. `desplegar.sh inicial`: el servicio de operación corre una vez `SERVICIO=inicial` (roles, esquemas, datos
+   simulados, ETL, modelo y anomalías). Tardó unos 7 minutos, 5.7 de ellos en el modelo.
+4. `desplegar.sh apps`: sube la API y el dashboard y les asigna dominio público.
+5. `desplegar.sh diario`: cambia la operación a `SERVICIO=diario` y la programa con la API de Railway
+   (`serviceInstanceUpdate`). La primera corrida completa (respaldo y su verificación, datos, ETL, modelo, anomalías y
+   monitoreo) se probó a mano antes de programarla.
+
+**Resultados verificados en la nube:** las mismas cifras que en local (279 alertas de desabasto, 462 de exceso y 152
+sin rotación; 13,334 unidades de pedido sugerido); la API responde 401 sin clave; las seis páginas del dashboard cargan.
+
+**Decisiones y hallazgos del despliegue:**
+
+- **Cliente de PostgreSQL 18 en la imagen.** Railway usa PostgreSQL 18 y `pg_dump` solo respalda servidores de su
+  versión o anteriores; la imagen instala `postgresql-client-18` del repositorio oficial (también sirve para el 16 de la CI).
+- **Datos del paquete.** El mapa de la red y las tipografías se declaran en `pyproject.toml`
+  (`tool.setuptools.package-data`); sin eso la página de Inicio fallaba dentro de la imagen.
+- **Logotipo.** `tema.py` resolvía la raíz desde su propia ubicación, que en la imagen es `site-packages`; ahora usa
+  `DATACORE_ROOT` (`/app`), igual que `db.py`.
+- **Sin disco persistente para la aplicación.** Los datos simulados se regeneran en ~10 s con la misma semilla y las
+  bitácoras de operación viven en la base (`ops.corridas`, `ops.respaldos`, `ops.monitoreo`). El respaldo diario se
+  crea y se verifica en cada corrida; la persistencia de la base la da el volumen de Railway.
+- **Subidas desde una copia limpia.** En Windows, `railway up` desde la carpeta de trabajo falla con "Acceso denegado"
+  si hay bitácoras abiertas; el script sube solo los archivos versionados. No se usa `railway service redeploy`:
+  reconstruye sin el Dockerfile.
+- **Costo:** se consume del plan de la cuenta de Railway del equipo; conviene revisar `railway usage` y apagar los
+  servicios después de la evaluación.
+
+## Alternativa documentada: Azure for Students (no utilizada)
+
+> El equipo la eligió primero, pero la verificación de estudiante de Azure falló repetidamente (el enlace de
+> verificación respondía "El cliente no tiene derechos de acceso al contenido"). Se conserva el plan y el script
+> `deploy/azure/desplegar.sh` como alternativa. Los precios y créditos se consultaron en fuentes de terceros.
 
 **Por qué Azure for Students:** US$100 de crédito sin tarjeta con el correo de la UPQ; PostgreSQL Flexible Server
 B1ms incluido 750 h al mes durante 12 meses (alcanza para una base encendida todo el mes); la imagen Docker del

@@ -11,5 +11,10 @@ requires-python = ">=3.11"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Archivos de datos del dashboard (mapa de la red y tipografías): sin esto no se instalan con el paquete
+# y la página de Inicio falla en la imagen Docker.
+[tool.setuptools.package-data]
+"datacore.dashboard" = ["datos/*.json", "datos/*.txt", "static/fuentes/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

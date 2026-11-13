@@ -12,6 +12,8 @@ Integrantes: David Israel Atilano Quiroz y Ricardo Leonel Ordaz Aguilar.
 DATACORE centraliza, limpia, valida y analiza la información de **NexaTech Solutions S.A. de C.V.**,
 una distribuidora ficticia con 12 sucursales, y pronostica la demanda para anticipar desabastos y excesos de inventario.
 
+**En línea:** [dashboard](https://datacore-dashboard-production.up.railway.app) · [API](https://datacore-api-production.up.railway.app/docs) (requiere clave) · desplegado en Railway con proceso diario programado ([docs/06](docs/06_operacion_y_despliegue.md)).
+
 ## Inicio rápido
 
 ```powershell
@@ -68,7 +70,7 @@ Guía completa: [manual técnico](docs/manual_tecnico.md).
 | Mejoras 2 | Alerta de desabasto con corrección de censura, elegida fuera de muestra (F1 0.239 → 0.281): [backtest.md](reports/ml/backtest.md) | Listo |
 | Mejoras 3 | Pedido sugerido y fecha límite en cada alerta de desabasto (API y dashboard) | Listo |
 | Mejoras 4 | "¿Por qué?" de cada alerta: 2 o 3 factores en lenguaje sencillo | Listo |
-| Mejoras 5 | Despliegue en Azure for Students: imagen preparada y plan en [docs/06](docs/06_operacion_y_despliegue.md) | Elegido, no ejecutado |
+| Mejoras 5 | Despliegue en Railway: dashboard, API, PostgreSQL y proceso diario a las 2:00 ([docs/06](docs/06_operacion_y_despliegue.md), `deploy/railway`) | En producción |
 | 15–16 | [Manual técnico](docs/manual_tecnico.md) y [manual de usuario](docs/manual_usuario.md) | Primera versión |
 | 15–16 | Memoria de estadía en formato UPQ (85 páginas): [PDF](docs/memoria/Memoria_Estadia_DATACORE.pdf), [fuente](docs/memoria/README.md) | Lista para revisión |
 

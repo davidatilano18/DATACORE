@@ -6,7 +6,7 @@ DATACORE cumplió su objetivo general: reúne en una sola plataforma reproducibl
 
 La decisión de diseño más valiosa fue construir una verdad de referencia desde el simulador. Gracias a ella, cada componente se evaluó con números en lugar de suponer que funcionaba: el ETL contra los defectos inyectados, el modelo contra la demanda real y contra cuatro métodos de referencia, las alertas contra los faltantes que realmente ocurrieron y el detector de anomalías contra las fallas registradas. Esta forma de trabajo permitió además encontrar resultados no evidentes, como que excluir las semanas censuradas empeora el sesgo del modelo, o que las fallas cortas del punto de venta son casi indetectables con datos diarios.
 
-La etapa de mejoras llevó la plataforma de funcionar a demostrar su valor. Una simulación de 2025 sobre la demanda real mostró que reponer con DATACORE habría reducido 14 % las ventas perdidas y 12 % el inventario inmovilizado, con un beneficio neto estimado de 346 mil pesos al año. Las alertas de desabasto pasaron a ser más precisas, a recomendar cuánto y cuándo pedir y a explicar su porqué en lenguaje sencillo.
+La etapa de mejoras llevó la plataforma de funcionar a demostrar su valor. Una simulación de 2025 sobre la demanda real mostró que reponer con DATACORE habría reducido 14 % las ventas perdidas y 12 % el inventario inmovilizado, con un beneficio neto estimado de 346 mil pesos al año. Las alertas de desabasto pasaron a ser más precisas, a recomendar cuánto y cuándo pedir y a explicar su porqué en lenguaje sencillo, y la plataforma quedó desplegada en la nube con un proceso diario programado.
 
 Los resultados principales confirman el valor de la plataforma. El ETL detecta los 18 tipos de defecto sin falsos positivos y recupera información en lugar de solo descartarla. El modelo de demanda supera a los métodos de referencia en todos los casos evaluados, con más ventaja en la temporada alta, cuando un error cuesta más. La alerta de desabasto, elegida fuera de muestra, acierta en una de cada cuatro ocasiones, contra una de cada seis y media de la regla original, y cada alerta indica cuánto pedir, para cuándo y por qué. La operación incluye respaldos que se restauran y se comparan, monitoreo, bitácoras y pruebas automáticas en cada cambio.
 
@@ -24,7 +24,7 @@ La Tabla 5.1 resume el cumplimiento de cada objetivo específico.
 | 6. Módulo de aprendizaje automático | Cumplido | WAPE de 26.9 %; alertas con explicación y pedido sugerido; impacto de ≈ $346 mil al año. |
 | 7. Dashboard | Cumplido | Seis páginas sobre la API. |
 | 8. Respaldos, eventos y monitoreo | Cumplido | Respaldo verificado, bitácoras y monitoreo. |
-| 9. Despliegue en un entorno centralizado | Parcial | Contenedor probado en integración continua; plataforma elegida (Azure for Students) y plan documentado; despliegue pendiente. |
+| 9. Despliegue en un entorno centralizado | Cumplido | Desplegado en Railway: dashboard público, API, PostgreSQL y proceso diario programado. |
 | 10. Documentación | Cumplido | Seis documentos técnicos, dos manuales y este reporte. |
 [NOTA] Elaboración propia.
 
@@ -48,14 +48,14 @@ El proyecto tiene limitaciones que deben considerarse al interpretar sus resulta
 - Las sucursales y los productos nuevos tienen poca historia, y su pronóstico depende más de la categoría, la región y la media del producto.
 - La fecha de baja de los productos descontinuados no existe en los datos de negocio, por lo que el modelo los ve como ceros durante el entrenamiento.
 - El detector de anomalías casi no ve las fallas cortas con datos diarios y no revisa las fechas especiales del calendario.
-- La plataforma no se ha desplegado en un servidor de producción; se ejecuta en el equipo de desarrollo y en la integración continua.
+- Los respaldos diarios se crean y se verifican en cada corrida, pero no se conservan fuera del contenedor; la persistencia de la base depende del volumen del servicio de Railway.
 - El impacto en dinero depende de un supuesto de costo de mantener inventario (25 % anual) y de una simulación; es una estimación, no una medición en operación real.
 
 ## 5.5 Trabajo futuro
 
 A partir de las limitaciones se proponen las siguientes mejoras:
 
-- Desplegar la plataforma en Azure for Students siguiendo el plan documentado, con la tarea diaria programada y el monitoreo contra las direcciones públicas.
+- Guardar los respaldos diarios en un almacenamiento externo y agregar alertas por correo cuando el monitoreo detecte una falla.
 - Descontar de la cantidad sugerida los pedidos en camino, registrando las órdenes de compra en la base.
 - Volver a calcular los pronósticos de la simulación con la historia que habría generado DATACORE, no con la de la política actual.
 - Registrar la fecha de baja de los productos y modelar su ciclo de vida.
@@ -228,12 +228,13 @@ La Tabla A.10 resume los comandos para instalar y operar la plataforma desde cer
 | Revisar el estado de la plataforma | python -m datacore.operacion monitoreo |
 | Ejecutar el proceso diario | python -m datacore.operacion diario |
 | Cargar todo en un servidor nuevo | python -m datacore.operacion inicial |
+| Desplegar o actualizar en Railway | bash deploy/railway/desplegar.sh (servicios, inicial, apps, diario) |
 | Ejecutar las pruebas | python -m pytest -q |
 [NOTA] Elaboración propia con base en docs/manual_tecnico.md.
 
 ## Anexo 3. Guía rápida para el usuario del dashboard
 
-El dashboard se abre en el navegador, en la dirección que proporcione el área de sistemas. Los datos se actualizan una vez al día, de madrugada, y la fecha de corte aparece en el sello «Corte de datos» del encabezado de cada página. Los montos están en pesos mexicanos. Las tablas se pueden ordenar con un clic en el encabezado y descargar en formato CSV. La Tabla A.11 explica cómo interpretar cada tipo de alerta.
+El dashboard se abre en el navegador, en https://datacore-dashboard-production.up.railway.app. Los datos se actualizan una vez al día, de madrugada, y la fecha de corte aparece en el sello «Corte de datos» del encabezado de cada página. Los montos están en pesos mexicanos. La Tabla A.11 explica cómo interpretar cada tipo de alerta.
 
 [TABLA] Interpretación de las alertas para el usuario
 | Alerta | Qué significa | Qué hacer |

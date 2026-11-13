@@ -9,8 +9,14 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 MPLBACKEND=Agg \
     SERVICIO=api PORT=8000 DATACORE_ROOT=/app
 
-# pg_dump/pg_restore para respaldos.
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client curl \
+# pg_dump/pg_restore para respaldos, de la versión 18 (repositorio oficial de PostgreSQL): pg_dump solo respalda
+# servidores de su versión o anteriores, y Railway usa PostgreSQL 18; también sirve para el 16 de la CI.
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+       > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends postgresql-client-18 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

@@ -25,6 +25,10 @@ def crear_roles_y_base() -> None:
             c.execute(text(f'{verbo} ROLE "{rol}" LOGIN PASSWORD {clave_sql}'))
             print(f"rol {rol}: {'actualizado' if existe else 'creado'}")
         if not c.execute(text("SELECT 1 FROM pg_database WHERE datname = :b"), {"b": base}).scalar():
+            # En servicios administrados (Azure, RDS) el administrador no es superusuario: para dar la base
+            # a otro rol debe ser miembro de él. Con un superusuario local no hace falta.
+            if not c.execute(text("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")).scalar():
+                c.execute(text(f'GRANT "{app}" TO CURRENT_USER'))
             c.execute(text(f'CREATE DATABASE "{base}" OWNER "{app}" ENCODING \'UTF8\' TEMPLATE template0'))
             print(f"base {base}: creada")
         else:

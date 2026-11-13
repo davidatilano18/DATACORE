@@ -14,3 +14,10 @@ data/
 .env
 .vscode/
 .idea/
+
+# Contraseñas del despliegue en Azure (las genera deploy/azure/desplegar.sh).
+deploy/azure/secretos.env
+deploy/railway/secretos.env
+# Artefactos de construcción del paquete.
+build/
+dist/
