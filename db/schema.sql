@@ -206,6 +206,7 @@ CREATE TABLE ops.alertas_inventario (
     nivel_objetivo NUMERIC(10,2),          -- RIESGO_DESABASTO: existencia a la que conviene llegar al reponer
     cantidad_sugerida INTEGER,             -- RIESGO_DESABASTO: unidades a pedir (nivel objetivo − existencia)
     fecha_limite   DATE,                   -- RIESGO_DESABASTO: último día para pedir y recibir antes de agotarse
+    motivos        TEXT,                   -- los 2 o 3 factores principales de la alerta, en lenguaje sencillo
     generada_en    TIMESTAMP   NOT NULL DEFAULT now(),
     atendida       BOOLEAN     NOT NULL DEFAULT FALSE
 );

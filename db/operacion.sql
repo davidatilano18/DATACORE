@@ -66,3 +66,6 @@ END $$;
 ALTER TABLE ops.alertas_inventario ADD COLUMN IF NOT EXISTS nivel_objetivo NUMERIC(10,2);
 ALTER TABLE ops.alertas_inventario ADD COLUMN IF NOT EXISTS cantidad_sugerida INTEGER;
 ALTER TABLE ops.alertas_inventario ADD COLUMN IF NOT EXISTS fecha_limite DATE;
+
+-- Migración (Fase 4 de mejoras): explicación de cada alerta.
+ALTER TABLE ops.alertas_inventario ADD COLUMN IF NOT EXISTS motivos TEXT;

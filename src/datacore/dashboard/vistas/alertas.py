@@ -1,4 +1,6 @@
 """Alertas: priorización, pedido sugerido y seguimiento de inventario."""
+from html import escape
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -6,6 +8,24 @@ from datacore.dashboard import interfaz, tema
 from datacore.dashboard.cliente import ClienteAPI
 
 TIPOS = {'RIESGO_DESABASTO': ('Riesgo de desabasto', 'critico'), 'EXCESO_INVENTARIO': ('Exceso de inventario', 'aviso'), 'SIN_ROTACION': ('Sin rotación', 'neutro')}
+
+
+def _por_que(caja, seleccion):
+    """Explicación completa de las alertas seleccionadas: sus 2 o 3 factores principales."""
+    bloques = []
+    for a in seleccion.itertuples():
+        nivel = TIPOS[a.tipo][1]
+        color, icono = tema.ESTADO[nivel]
+        factores = ''.join(f'<li>{escape(f)}</li>' for f in str(a.motivos or '').split('; ') if f)
+        pedido = ''
+        if a.tipo == 'RIESGO_DESABASTO' and pd.notna(getattr(a, 'cantidad_sugerida', None)):
+            pedido = (f'<div class="dc-pedido">Pedir {int(a.cantidad_sugerida):,} u a más tardar el '
+                      f'{pd.Timestamp(a.fecha_limite):%d/%m/%Y} (demanda esperada en la reposición: '
+                      f'{float(a.demanda_estimada):,.1f} u)</div>')
+        bloques.append(f'<div class="dc-porque"><b><span style="color:{color}" aria-hidden="true">{icono}</span> '
+                       f'{escape(a.sucursal)} · {escape(a.producto)}</b><ul>{factores}</ul>{pedido}</div>')
+    caja.markdown('<div class="dc-porque-lista"><span class="dc-desc">¿Por qué?</span>' + ''.join(bloques) + '</div>',
+                  unsafe_allow_html=True)
 
 
 def mostrar():
@@ -50,8 +70,10 @@ def mostrar():
     visibles['tipo'] = visibles.tipo.map(lambda x: tema.ESTADO[TIPOS[x][1]][1]+' '+TIPOS[x][0])
     if 'fecha_limite' in visibles:
         visibles['fecha_limite'] = pd.to_datetime(visibles.fecha_limite)
+    if 'motivos' in visibles:
+        visibles['motivo'] = visibles.motivos.fillna('').str.split('; ').str[0]
     columnas = [c for c in ['sucursal', 'sku', 'producto', 'tipo', 'cantidad_sugerida', 'fecha_limite', 'existencia',
-                            'demanda_estimada', 'dias_cobertura'] if c in visibles]
+                            'dias_cobertura', 'motivo'] if c in visibles]
     config = {c: st.column_config.TextColumn(c.replace('_', ' ').capitalize()) for c in columnas}
     config['dias_cobertura'] = st.column_config.NumberColumn('Cobertura (días)', format='%.1f')
     for campo in columnas:
@@ -64,9 +86,15 @@ def mostrar():
     config['fecha_limite'] = st.column_config.DateColumn(
         'Pedir a más tardar', format='DD/MM/YYYY', width='medium',
         help='Último día para pedir y recibir antes de agotarse, al ritmo de venta esperado')
-    config['demanda_estimada'] = st.column_config.NumberColumn('Demanda', format='%.1f', width='small', help='Demanda esperada durante la reposición (entrega + 7 días), corregida por días agotado')
+    config['motivo'] = st.column_config.TextColumn(
+        'Motivo principal', width='large',
+        help='El factor que más pesa en la alerta; selecciona la fila para ver la explicación completa')
     seleccion = caja.dataframe(visibles[columnas], hide_index=True, column_config=config, on_select='rerun', selection_mode='multi-row', key=f"alertas_pendientes_{st.session_state.get('revision_alertas', 0)}", width='stretch')
     filas = seleccion.selection.rows
+    if filas and 'motivos' in marco:
+        _por_que(caja, marco.iloc[filas[:5]])
+        if len(filas) > 5:
+            caja.caption(f'Se muestran 5 de las {len(filas)} filas seleccionadas.')
     if caja.button('Marcar como atendidas', disabled=not filas):
         for fila in filas:
             ClienteAPI().atender(int(marco.iloc[fila].id_alerta))

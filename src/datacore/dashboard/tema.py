@@ -200,6 +200,12 @@ CSS = f"""
   .dc-suc .v {{ color: {TINTA}; font-family: {FUENTE_CIFRAS}; font-size: 1.35rem; font-weight: 600; margin-top: .1rem; }}
   .dc-suc svg.spark {{ display: block; width: 100%; height: 28px; margin: .2rem 0 .3rem; }}
   .dc-suc .est {{ display: flex; flex-wrap: wrap; gap: .15rem .8rem; font-size: .78rem; color: {TINTA_2}; }}
+  /* ¿Por qué? de las alertas seleccionadas. */
+  .dc-porque-lista {{ display: grid; gap: 8px; margin: .2rem 0 .6rem; }}
+  .dc-porque {{ border-left: 3px solid {EJE}; padding: 4px 0 4px 12px; color: {TINTA_2}; font-size: .9rem; }}
+  .dc-porque b {{ color: {TINTA}; font-weight: 600; }}
+  .dc-porque ul {{ margin: .25rem 0 .2rem 1.1rem; padding: 0; }}
+  .dc-pedido {{ color: {TINTA}; font-weight: 600; font-size: .86rem; }}
   .dc-estado {{ display: inline-flex; align-items: center; gap: .35rem; padding: .18rem .6rem; border-radius: 999px;
                 font-size: .8rem; font-weight: 600; border: 1px solid; background: {SUPERFICIE}; }}
   /* Tarjetas sueltas (páginas que aún no pasan al nuevo sistema). */

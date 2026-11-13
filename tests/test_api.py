@@ -143,3 +143,11 @@ def test_alertas_de_desabasto_traen_pedido_sugerido(cliente):
     assert fechas == sorted(fechas)  # las más urgentes primero
     otras = cliente.get("/alertas?tipo=EXCESO_INVENTARIO&limite=50").json()
     assert all(a["cantidad_sugerida"] is None and a["fecha_limite"] is None for a in otras)
+
+
+def test_cada_alerta_explica_su_motivo(cliente):
+    alertas = cliente.get("/alertas?limite=5000").json()
+    assert alertas and all(a["motivos"] for a in alertas)
+    assert all(1 <= len(a["motivos"].split("; ")) <= 3 for a in alertas)
+    desabasto = [a for a in alertas if a["tipo"] == "RIESGO_DESABASTO"]
+    assert all("existencia" in a["motivos"].lower() for a in desabasto)

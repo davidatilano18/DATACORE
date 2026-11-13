@@ -162,3 +162,23 @@ La API (`GET /alertas`) devuelve las tres columnas y ordena el riesgo de desabas
 *Alertas* muestra la cantidad y la fecha en la tabla, y el total de unidades sugeridas. Limitación: `core` no registra
 órdenes en camino, así que la cantidad no descuenta lo ya pedido; el comprador debe restarlo. Las bases creadas antes
 de este cambio reciben las columnas con la migración al final de `db/operacion.sql` (`python -m datacore.db_setup`).
+
+### ¿Por qué? de cada alerta (Fase 4 de mejoras)
+
+Cada alerta guarda en `ops.alertas_inventario.motivos` sus 2 o 3 factores principales en lenguaje sencillo (código:
+`src/datacore/ml/explicaciones.py`). Método: **reglas transparentes** sobre las mismas cantidades con las que se decide
+la alerta (existencia, demanda esperada, días de entrega) y sobre variables que el modelo también usa. Cada regla que
+aplica produce un factor con un puntaje de gravedad y se muestran los de mayor puntaje.
+
+| alerta | factores posibles (umbral para mencionarlo) |
+|---|---|
+| Desabasto | días que alcanza la existencia contra los días de entrega (siempre); tendencia contra las últimas 8 semanas (≥ +15 %); evento de calendario en las próximas 2 semanas; temporada alta de la categoría (índice ≥ 1.2); días agotado en las últimas 4 semanas (≥ 3); proveedor con entrega ≥ 8 días |
+| Exceso | días que cubre la existencia (siempre); tendencia a la baja (≤ −15 %); menos de una pieza por semana; temporada baja |
+| Sin rotación | 13 semanas sin venta (siempre); piezas paradas y su valor a precio de lista; temporada baja |
+
+**Por qué reglas y no la atribución del modelo (p. ej., SHAP):** la alerta compara existencia contra demanda, así que su
+explicación se entiende en esos términos y no como el peso de una variable dentro de los árboles. Cada frase se puede
+verificar contra los datos, no requiere dependencias nuevas y se calcula al instante para todas las alertas.
+
+En el dashboard, la tabla de *Alertas* muestra el motivo principal; al seleccionar filas aparece la explicación completa
+con el pedido sugerido. La API devuelve el campo `motivos` en `GET /alertas`.

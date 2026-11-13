@@ -103,3 +103,24 @@ def test_pestanas_calidad(api_disponible):
     assert not aplicacion.exception and not aplicacion.error
     assert [t.label for t in aplicacion.tabs] == ['Calidad de datos', 'Anomalías', 'Incidencias', 'Plataforma']
     assert any('Últimos respaldos' in m.value for m in aplicacion.markdown)
+
+
+def test_panel_por_que_muestra_factores_y_pedido():
+    import pandas as pd
+    from datacore.dashboard.vistas.alertas import _por_que
+
+    class Caja:
+        def __init__(self):
+            self.html = ''
+
+        def markdown(self, texto, unsafe_allow_html=False):
+            self.html += texto
+
+    caja = Caja()
+    _por_que(caja, pd.DataFrame([{
+        'tipo': 'RIESGO_DESABASTO', 'sucursal': 'QRO01', 'producto': 'Jabón <líquido>', 'cantidad_sugerida': 12,
+        'fecha_limite': '2026-01-03', 'demanda_estimada': 8.5,
+        'motivos': 'Ya no hay existencia y un pedido tarda 6 días en llegar; se acerca el Día de Reyes'}]))
+    assert caja.html.count('<li>') == 2
+    assert 'Pedir 12 u a más tardar el 03/01/2026' in caja.html
+    assert 'Jabón &lt;líquido&gt;' in caja.html  # el texto se escapa

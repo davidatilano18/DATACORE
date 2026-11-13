@@ -13,6 +13,7 @@ from scipy import stats
 from sqlalchemy import Engine, text
 
 from . import caracteristicas as car
+from . import explicaciones
 from .alertas_segmentadas import TOPE_CENSURA, factor_censura
 from .datos import Series
 from .modelos import entrenar
@@ -129,6 +130,10 @@ def alertas(series: Series, pron: pd.DataFrame) -> pd.DataFrame:
     rec.index = out.index[riesgo_out]
     resultado = resultado.join(rec)
     resultado["cantidad_sugerida"] = resultado["cantidad_sugerida"].astype("Int64")
+    # ¿Por qué? Los 2 o 3 factores principales de cada alerta (reglas sobre las cantidades de la alerta).
+    detalle = out.assign(demanda_diaria=out["_mu"] / np.maximum(out["_dias_horizonte"], 1),
+                         cobertura_dias=out["cobertura_dias"].fillna(9999))
+    resultado["motivos"] = explicaciones.explicar(detalle, series).to_numpy()
     return resultado
 
 
