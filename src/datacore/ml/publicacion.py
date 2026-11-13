@@ -22,6 +22,31 @@ DIAS_EXCESO = 180
 # existencia < demanda esperada durante entrega + 7 días, corregida por censura. Mejor F1 que el p90 anterior
 # en los 4 bloques de 2025 (0.281 contra 0.239) y elegida con los bloques de 2024.
 Z_ALERTA = 0.0
+# Recomendación de pedido para cada alerta de desabasto: subir la existencia hasta el cuantil 99 de la demanda
+# durante entrega + 7 días (binomial negativa, corregida por censura). Es el cuantil calibrado en
+# `python -m datacore.ml impacto` (abril–diciembre de 2024): con él, reponer así superó a la política actual en 2025.
+CUANTIL_REPOSICION = 0.99
+
+
+def recomendacion(existencia: np.ndarray, mu: np.ndarray, var: np.ndarray, dias_horizonte: np.ndarray,
+                  dias_entrega: np.ndarray, fecha_corte: pd.Timestamp,
+                  cuantil: float = CUANTIL_REPOSICION) -> pd.DataFrame:
+    """Nivel objetivo, cantidad sugerida y fecha límite de pedido.
+
+    - nivel objetivo: cuantil de la demanda en el horizonte (demanda esperada + stock de seguridad);
+    - cantidad: lo que falta para llegar al nivel objetivo, redondeado hacia arriba (mínimo 1);
+    - fecha límite: corte + días que dura la existencia al ritmo esperado − días de entrega; si ya no da
+      tiempo, el día siguiente al corte.
+    """
+    from .impacto import cuantil_binomial_negativa
+    nivel = cuantil_binomial_negativa(mu, var, cuantil)
+    cantidad = np.maximum(np.ceil(nivel - existencia), 1)
+    tasa = np.asarray(mu, dtype=float) / np.maximum(dias_horizonte, 1)
+    dura = np.where(tasa > 0, np.asarray(existencia, dtype=float) / np.where(tasa > 0, tasa, 1), 365)
+    holgura = np.clip(np.floor(dura - dias_entrega), 1, 365).astype(int)
+    fechas = pd.to_datetime(fecha_corte) + pd.to_timedelta(holgura, unit="D")
+    return pd.DataFrame({"nivel_objetivo": np.round(nivel, 2), "cantidad_sugerida": cantidad.astype(int),
+                         "fecha_limite": fechas.date})
 
 
 def pronosticar(series: Series, horizontes=(1, 2, 3, 4), dispersion: dict[int, float] | None = None,
@@ -78,6 +103,9 @@ def alertas(series: Series, pron: pd.DataFrame) -> pd.DataFrame:
     df["factor_censura"] = factor_censura(
         agotado_4.reindex(pd.MultiIndex.from_frame(df[["id_sucursal", "id_producto"]])).to_numpy(), TOPE_CENSURA)
     df["demanda_reposicion"] = (mu_h + Z_ALERTA * np.sqrt(var_h)) * df["factor_censura"].to_numpy()
+    df["_mu"] = mu_h * df["factor_censura"].to_numpy()
+    df["_var"] = var_h * df["factor_censura"].to_numpy() ** 2
+    df["_dias_horizonte"] = dias_horizonte
     df["cobertura_dias"] = df["existencia"] / np.where(df["media_semanal"] > 0, df["media_semanal"] / 7, np.nan)
 
     ultimas_13 = series.unidades.iloc[-13:].sum()
@@ -87,12 +115,21 @@ def alertas(series: Series, pron: pd.DataFrame) -> pd.DataFrame:
     riesgo = ~sin_rotacion & (df["existencia"] < df["demanda_reposicion"])
     exceso = ~sin_rotacion & ~riesgo & (df["cobertura_dias"] > DIAS_EXCESO)
     df["tipo"] = np.select([riesgo, exceso, sin_rotacion], ["RIESGO_DESABASTO", "EXCESO_INVENTARIO", "SIN_ROTACION"], "")
-    out = df[df["tipo"] != ""]
-    return pd.DataFrame({
+    out = df[df["tipo"] != ""].reset_index(drop=True)
+    resultado = pd.DataFrame({
         "id_sucursal": out["id_sucursal"], "id_producto": out["id_producto"], "tipo": out["tipo"],
         "existencia": out["existencia"], "demanda_estimada": out["demanda_reposicion"].round(2),
         "dias_cobertura": out["cobertura_dias"].round(1).clip(upper=9999),
-    }).reset_index(drop=True)
+    })
+    # Recomendación de pedido solo para el riesgo de desabasto; las demás alertas no llevan pedido.
+    riesgo_out = out["tipo"] == "RIESGO_DESABASTO"
+    rec = recomendacion(out.loc[riesgo_out, "existencia"].to_numpy(), out.loc[riesgo_out, "_mu"].to_numpy(),
+                        out.loc[riesgo_out, "_var"].to_numpy(), out.loc[riesgo_out, "_dias_horizonte"].to_numpy(),
+                        out.loc[riesgo_out, "dias_entrega"].to_numpy(), series.fecha_corte)
+    rec.index = out.index[riesgo_out]
+    resultado = resultado.join(rec)
+    resultado["cantidad_sugerida"] = resultado["cantidad_sugerida"].astype("Int64")
+    return resultado
 
 
 def guardar(engine: Engine, metricas: dict, fecha_corte: pd.Timestamp, pron: pd.DataFrame,

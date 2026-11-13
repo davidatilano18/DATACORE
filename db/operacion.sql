@@ -61,3 +61,8 @@ BEGIN
         EXECUTE 'ALTER TABLE ' || r.tabla || ' DROP CONSTRAINT ' || quote_ident(r.conname);
     END LOOP;
 END $$;
+
+-- Migración (Fase 3 de mejoras): recomendación de pedido en las alertas de desabasto.
+ALTER TABLE ops.alertas_inventario ADD COLUMN IF NOT EXISTS nivel_objetivo NUMERIC(10,2);
+ALTER TABLE ops.alertas_inventario ADD COLUMN IF NOT EXISTS cantidad_sugerida INTEGER;
+ALTER TABLE ops.alertas_inventario ADD COLUMN IF NOT EXISTS fecha_limite DATE;

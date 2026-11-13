@@ -146,3 +146,19 @@ y 0.275 de la media, mejor en los 4 bloques. La precisión sube de 15.6 % a 25.9
 
 La alerta sirve para priorizar la revisión. Para decidir cuánto y cuándo pedir conviene el nivel objetivo (cuantil de
 la demanda) de `impacto`: reponer solo cuando salta la alerta pierde mucho más (ver `reports/ml/impacto.md`).
+
+### Pedido sugerido y fecha límite (Fase 3 de mejoras)
+
+Cada alerta `RIESGO_DESABASTO` trae una recomendación, calculada en `publicacion.recomendacion` y guardada en
+`ops.alertas_inventario`:
+
+| columna | cálculo |
+|---|---|
+| `nivel_objetivo` | Cuantil 99 de la demanda durante entrega + 7 días (binomial negativa, corregida por censura): demanda esperada + stock de seguridad. Es el cuantil calibrado en `impacto` (abril–diciembre de 2024). |
+| `cantidad_sugerida` | `ceil(nivel_objetivo − existencia)`, mínimo 1. |
+| `fecha_limite` | Fecha de corte + días que dura la existencia al ritmo esperado − días de entrega; si ya no da tiempo, el día siguiente al corte. |
+
+La API (`GET /alertas`) devuelve las tres columnas y ordena el riesgo de desabasto por fecha límite. La página
+*Alertas* muestra la cantidad y la fecha en la tabla, y el total de unidades sugeridas. Limitación: `core` no registra
+órdenes en camino, así que la cantidad no descuenta lo ya pedido; el comprador debe restarlo. Las bases creadas antes
+de este cambio reciben las columnas con la migración al final de `db/operacion.sql` (`python -m datacore.db_setup`).

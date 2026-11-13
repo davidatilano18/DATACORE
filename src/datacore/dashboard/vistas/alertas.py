@@ -1,4 +1,5 @@
-"""Alertas: priorización y seguimiento de inventario."""
+"""Alertas: priorización, pedido sugerido y seguimiento de inventario."""
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from datacore.dashboard import interfaz, tema
@@ -35,15 +36,34 @@ def mostrar():
         marco = marco[marco.categoria == categoria]
     if buscar:
         marco = marco[marco.sku.str.contains(buscar, case=False, regex=False) | marco.producto.str.contains(buscar, case=False, regex=False)]
+    riesgo = marco[marco.tipo == 'RIESGO_DESABASTO']
+    if not riesgo.empty and 'cantidad_sugerida' in riesgo:
+        limite = pd.to_datetime(riesgo.fecha_limite)
+        corte = pd.Timestamp(((interfaz.datos('/salud') or {}).get('modelo_activo') or {}).get('fecha_corte_datos')
+                             or limite.min() - pd.Timedelta(days=1))
+        urgentes = int((limite <= corte + pd.Timedelta(days=7)).sum())
+        caja.markdown(
+            f'<div class="dc-desc">Pedido sugerido para las {len(riesgo):,} alertas de desabasto filtradas: '
+            f'<b>{int(riesgo.cantidad_sugerida.sum()):,} unidades</b>; {urgentes:,} deben pedirse en los próximos 7 días. '
+            'Las más urgentes aparecen primero.</div>', unsafe_allow_html=True)
     visibles = marco.copy().reset_index(drop=True)
     visibles['tipo'] = visibles.tipo.map(lambda x: tema.ESTADO[TIPOS[x][1]][1]+' '+TIPOS[x][0])
-    columnas = [c for c in ['sucursal', 'sku', 'producto', 'tipo', 'existencia', 'demanda_estimada', 'dias_cobertura'] if c in visibles]
+    if 'fecha_limite' in visibles:
+        visibles['fecha_limite'] = pd.to_datetime(visibles.fecha_limite)
+    columnas = [c for c in ['sucursal', 'sku', 'producto', 'tipo', 'cantidad_sugerida', 'fecha_limite', 'existencia',
+                            'demanda_estimada', 'dias_cobertura'] if c in visibles]
     config = {c: st.column_config.TextColumn(c.replace('_', ' ').capitalize()) for c in columnas}
     config['dias_cobertura'] = st.column_config.NumberColumn('Cobertura (días)', format='%.1f')
     for campo in columnas:
         config[campo] = st.column_config.Column(campo.replace('_', ' ').capitalize(), width='medium' if campo in ['producto', 'tipo'] else 'small')
     config['dias_cobertura'] = st.column_config.NumberColumn('Cobertura (días)', format='%.1f', width='small')
     config['sku'] = st.column_config.TextColumn('SKU', width='small')
+    config['cantidad_sugerida'] = st.column_config.NumberColumn(
+        'Pedir (u)', format='%d', width='small',
+        help='Unidades para llegar al nivel objetivo: demanda esperada en entrega + 7 días más stock de seguridad (p99)')
+    config['fecha_limite'] = st.column_config.DateColumn(
+        'Pedir a más tardar', format='DD/MM/YYYY', width='medium',
+        help='Último día para pedir y recibir antes de agotarse, al ritmo de venta esperado')
     config['demanda_estimada'] = st.column_config.NumberColumn('Demanda', format='%.1f', width='small', help='Demanda esperada durante la reposición (entrega + 7 días), corregida por días agotado')
     seleccion = caja.dataframe(visibles[columnas], hide_index=True, column_config=config, on_select='rerun', selection_mode='multi-row', key=f"alertas_pendientes_{st.session_state.get('revision_alertas', 0)}", width='stretch')
     filas = seleccion.selection.rows

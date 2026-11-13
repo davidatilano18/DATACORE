@@ -128,3 +128,18 @@ def test_rutas_nuevas_protegidas(monkeypatch, ruta):
     with TestClient(app) as cliente:
         assert cliente.get(ruta).status_code == 401
         assert cliente.get(ruta, headers={'X-API-Key': 'prueba'}).status_code == 200
+
+
+def test_alertas_de_desabasto_traen_pedido_sugerido(cliente):
+    riesgo = cliente.get("/alertas?tipo=RIESGO_DESABASTO&limite=5000").json()
+    assert riesgo, "se esperaba al menos una alerta de desabasto"
+    corte = cliente.get("/salud").json()["modelo_activo"]["fecha_corte_datos"]
+    for a in riesgo:
+        assert a["cantidad_sugerida"] >= 1
+        # Pedir la cantidad sugerida lleva la existencia al menos hasta el nivel objetivo.
+        assert a["existencia"] + a["cantidad_sugerida"] >= float(a["nivel_objetivo"]) - 1e-6
+        assert a["fecha_limite"] > corte
+    fechas = [a["fecha_limite"] for a in riesgo]
+    assert fechas == sorted(fechas)  # las más urgentes primero
+    otras = cliente.get("/alertas?tipo=EXCESO_INVENTARIO&limite=50").json()
+    assert all(a["cantidad_sugerida"] is None and a["fecha_limite"] is None for a in otras)

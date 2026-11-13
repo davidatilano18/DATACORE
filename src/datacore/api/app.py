@@ -228,7 +228,8 @@ def desabasto(id_sucursal: int | None = None, eng=Depends(lector)):
                           FROM kpi.desabasto_mensual {where} GROUP BY mes ORDER BY mes""", **p)
 
 
-@app.get("/alertas", tags=["inventario"], dependencies=protegido, summary="Alertas de inventario pendientes")
+@app.get("/alertas", tags=["inventario"], dependencies=protegido,
+         summary="Alertas de inventario pendientes; las de desabasto traen pedido sugerido y fecha límite")
 def alertas(tipo: TipoAlerta | None = None, id_sucursal: int | None = None, incluir_atendidas: bool = False,
             limite: Limite = 500, eng=Depends(lector)):
     where, p = filtros(**{"a.tipo": tipo.value if tipo else None, "a.id_sucursal": id_sucursal,
@@ -238,7 +239,7 @@ def alertas(tipo: TipoAlerta | None = None, id_sucursal: int | None = None, incl
                           JOIN core.productos p USING (id_producto) JOIN core.categorias c USING (id_categoria)
                           {where}
                           ORDER BY CASE a.tipo WHEN 'RIESGO_DESABASTO' THEN 0 WHEN 'EXCESO_INVENTARIO' THEN 1 ELSE 2 END,
-                                   a.dias_cobertura NULLS LAST LIMIT :l""", l=limite, **p)
+                                   a.fecha_limite NULLS LAST, a.dias_cobertura NULLS LAST LIMIT :l""", l=limite, **p)
 
 
 @app.post("/alertas/{id_alerta}/atender", tags=["inventario"], dependencies=protegido,
