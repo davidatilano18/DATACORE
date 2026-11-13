@@ -11,8 +11,11 @@ def mostrar():
     tema.encabezado('Inventario', 'Localiza faltantes, exceso y productos inmovilizados antes de decidir la reposición.')
     marco = interfaz.tabla('/inventario/cobertura', limite=5000)
     total = len(marco)
-    tema.fila_tarjetas([tema.tarjeta(nombre, tema.entero((marco.estado == estado).sum() if total else 0), nivel=nivel, nota=tema.pct(100*(marco.estado == estado).sum()/total) + ' del total' if total else 'Sin datos', alto=130) for estado, (nombre, nivel) in ESTADOS.items()])
-    tema.seccion('Distribución por sucursal', 'Cada segmento representa pares sucursal-producto; revisa dónde se concentran los faltantes.')
+    with tema.bloque('Salud del inventario', f'{total:,} pares sucursal-producto según su cobertura'):
+        if total:
+            tema.barra_salud([(nombre, int((marco.estado == estado).sum()), nivel) for estado, (nombre, nivel) in ESTADOS.items()])
+        tema.franja([tema.kpi(nombre, tema.entero((marco.estado == estado).sum() if total else 0), nivel=nivel, nota=tema.pct(100*(marco.estado == estado).sum()/total) + ' del total' if total else 'Sin datos') for estado, (nombre, nivel) in ESTADOS.items()], ligera=True)
+    st.write('')
     if total:
         grupos = marco.groupby(['sucursal', 'estado']).size().unstack(fill_value=0)
         grupos = grupos.loc[grupos.sum(axis=1).sort_values().index]
@@ -21,8 +24,8 @@ def mostrar():
             valores = grupos[estado] if estado in grupos else pd.Series(0, index=grupos.index)
             fig.add_bar(y=grupos.index, x=valores, orientation='h', name=tema.ESTADO[nivel][1]+' '+nombre, marker_color=tema.ESTADO[nivel][0], hovertemplate='%{y}<br>%{x:,.0f} pares<extra>'+nombre+'</extra>')
         fig.update_layout(barmode='stack', legend=dict(traceorder='normal'), xaxis_title='Pares sucursal-producto', hovermode='closest')
-        tema.grafica(fig, alto=420)
-    tema.seccion('Desabasto a lo largo del tiempo', 'Un tono más oscuro indica una mayor tasa de días sin existencia.')
+        with tema.bloque('Distribución por sucursal', 'Pares sucursal-producto por estado; revisa dónde se concentran los faltantes'):
+            tema.grafica(fig, alto=420)
     filas = []
     for suc in interfaz.datos('/catalogos/sucursales'):
         d = interfaz.tabla('/inventario/desabasto', id_sucursal=suc['id_sucursal'])
@@ -33,9 +36,14 @@ def mostrar():
         matriz = pd.concat(filas).pivot(index='sucursal', columns='mes', values='tasa_desabasto')*100
         fig = go.Figure(go.Heatmap(x=matriz.columns, y=matriz.index, z=matriz.values, colorscale=tema.SECUENCIAL, colorbar=dict(title='Tasa (%)'), hovertemplate='%{y} · %{x}<br>Desabasto: %{z:.1f} %<extra></extra>'))
         fig.update_xaxes(tickformat='%m/%Y')
-        tema.grafica(fig, alto=400)
-    tema.seccion('Cobertura de inventario', 'Días estimados con las ventas de los últimos 90 días. Sin cobertura significa existencia sin ventas.')
-    a, b, c = st.columns([1, 1, 2])
+        with tema.bloque('Desabasto a lo largo del tiempo', 'Un tono más oscuro indica una mayor tasa de días sin existencia'):
+            tema.grafica(fig, alto=400)
+    _cobertura(marco, total)
+
+
+def _cobertura(marco, total):
+    caja = tema.bloque('Cobertura de inventario', 'Días estimados con las ventas de los últimos 90 días; sin cobertura significa existencia sin ventas')
+    a, b, c = caja.columns([1, 1, 2])
     with a:
         estado = st.selectbox('Estado', ['Todos']+list(ESTADOS), format_func=lambda x: ESTADOS[x][0] if x in ESTADOS else x)
     with b:
@@ -43,7 +51,7 @@ def mostrar():
     with c:
         buscar = st.text_input('Buscar SKU o producto')
     if not total:
-        st.info('No hay inventario disponible.')
+        caja.info('No hay inventario disponible.')
         return
     if estado != 'Todos':
         marco = marco[marco.estado == estado]
@@ -57,4 +65,4 @@ def mostrar():
     columnas = [c for c in columnas if c in marco]
     config = {c: st.column_config.TextColumn(c.replace('_', ' ').capitalize()) for c in columnas}
     config['cobertura_dias'] = st.column_config.ProgressColumn('Cobertura (días)', min_value=0, max_value=max(180, float(marco.cobertura_dias.max() or 180)) if not marco.empty else 180, format='%.1f días')
-    st.dataframe(marco[columnas], hide_index=True, column_config=config, width='stretch')
+    caja.dataframe(marco[columnas], hide_index=True, column_config=config, width='stretch')

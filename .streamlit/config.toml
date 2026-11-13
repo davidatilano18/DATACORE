@@ -1,16 +1,43 @@
+[server]
+# Sirve src/datacore/dashboard/static (fuentes IBM Plex Sans, licencia OFL) en /app/static/.
+enableStaticServing = true
+
 [theme]
 base = "light"
 primaryColor = "#8A1538"
-backgroundColor = "#F5F7FA"
+backgroundColor = "#F4F6F9"
 secondaryBackgroundColor = "#E9EDF3"
 textColor = "#1B2A4A"
-font = "sans serif"
-borderColor = "#DCE2EB"
-baseRadius = "medium"
+font = "IBM Plex Sans, 'Segoe UI', sans-serif"
+headingFont = "IBM Plex Sans, 'Segoe UI', sans-serif"
+borderColor = "#D5DCE6"
+baseRadius = "small"
+
+[[theme.fontFaces]]
+family = "IBM Plex Sans"
+url = "app/static/fuentes/ibm-plex-sans-400.woff2"
+weight = 400
+
+[[theme.fontFaces]]
+family = "IBM Plex Sans"
+url = "app/static/fuentes/ibm-plex-sans-500.woff2"
+weight = 500
+
+[[theme.fontFaces]]
+family = "IBM Plex Sans"
+url = "app/static/fuentes/ibm-plex-sans-600.woff2"
+weight = 600
+
+[[theme.fontFaces]]
+family = "IBM Plex Sans"
+url = "app/static/fuentes/ibm-plex-sans-700.woff2"
+weight = 700
 
 [theme.sidebar]
-backgroundColor = "#FFFFFF"
-textColor = "#1B2A4A"
+backgroundColor = "#1B2A4A"
+secondaryBackgroundColor = "#26385E"
+textColor = "#DCE3EE"
+borderColor = "#2C3E64"
 
 [client]
 toolbarMode = "minimal"

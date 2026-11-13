@@ -6,14 +6,18 @@ Se usa desde el navegador, en el **dashboard**.
 ## Antes de empezar
 
 - El dashboard se abre en la dirección que te dé el equipo de sistemas (en local: `http://localhost:8501`).
-- Los datos se actualizan una vez al día, de madrugada. La fecha de la última actualización aparece en *Inicio → Estado de la plataforma*.
+- Los datos se actualizan una vez al día, de madrugada. Cada página muestra arriba a la derecha el sello **Corte de datos** con la fecha de la información; el detalle de la última carga está en *Inicio → Estado de la plataforma*.
 - Los montos están en pesos mexicanos (MXN).
 - Las tablas se pueden ordenar haciendo clic en el encabezado y descargar como CSV desde el menú de la propia tabla.
 
 ## Páginas
 
 ### Inicio: resumen ejecutivo
-Tarjetas con los indicadores principales: ingreso total y de los últimos 12 meses (con su crecimiento frente a los 12 meses previos), tickets, ticket promedio, clientes activos, cuántas combinaciones de sucursal y producto están sin existencia, en exceso o sin rotación, e incidencias abiertas. Debajo están la tendencia de ventas mensuales y el estado de la plataforma.
+- **Franja de indicadores:** ingreso, tickets y ticket promedio de los últimos 12 meses (con su variación frente a los 12 meses previos) y clientes activos.
+- **Salud del inventario:** una barra reparte los 4,800 pares sucursal-producto por estado (sin existencia, bajo mínimo, exceso, sin rotación y normal). Debajo están las alertas pendientes de cada tipo y las incidencias abiertas.
+- **Red de sucursales:** un mapa con las 12 sucursales; el tamaño del punto es su ingreso de 12 meses y el anillo rojo marca las tres con más alertas pendientes. Pasa el cursor sobre un punto para ver su detalle. El mapa es esquemático: las sucursales de una misma ciudad aparecen ligeramente separadas. Debajo, una tarjeta por sucursal con su ingreso, su tendencia mensual y sus alertas por tipo.
+- **Ingreso mensual y categorías:** el año en curso contra los dos anteriores y el ingreso por categoría.
+- **Estado de la plataforma:** si la API, el último ETL y el modelo están al día.
 
 ### Ventas
 1. Elige el **rango de fechas** (por defecto, el último año) y, si quieres, una **sucursal**.

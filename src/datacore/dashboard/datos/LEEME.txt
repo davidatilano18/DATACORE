@@ -1,0 +1,2 @@
+Contornos de los estados de México simplificados (2 decimales) a partir de
+https://github.com/angelnmara/geojson (mexicoHigh.json). Se usan solo para dibujar el mapa de la red de sucursales.

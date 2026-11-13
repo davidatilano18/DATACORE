@@ -36,14 +36,14 @@ def mostrar():
     real = historia.tail(4).unidades.sum()
     inventario = interfaz.tabla('/inventario/cobertura', limite=5000)
     existencia = inventario.loc[inventario.id_producto == identificador, 'existencia'].sum()
-    tema.fila_tarjetas([
-        tema.tarjeta('Demanda · próximas 4 semanas', tema.entero(esperado), nota=f"Intervalo 80 %: {tema.entero(resumen['limite_inferior'])}–{tema.entero(resumen['limite_superior'])}", serie=futuro.demanda_estimada.tolist(), alto=150),
+    tema.franja([
+        tema.kpi('Demanda · próximas 4 semanas', tema.entero(esperado), nota=f"Intervalo 80 %: {tema.entero(resumen['limite_inferior'])}–{tema.entero(resumen['limite_superior'])}", serie=futuro.demanda_estimada.tolist()),
         # Que el pronóstico supere o no a la venta reciente no es bueno ni malo: va como dato neutro, sin color.
-        tema.tarjeta('Últimas 4 semanas reales', tema.entero(real), nota=_comparacion(esperado, real), alto=150),
-        tema.tarjeta('Existencia actual', tema.entero(existencia), nota='Todas las sucursales', alto=150),
-        tema.tarjeta('Clase ABC', producto.get('clase_abc') or 'Sin clase', nota='Clasificación histórica por ingreso', alto=150)])
+        tema.kpi('Últimas 4 semanas reales', tema.entero(real), nota=_comparacion(esperado, real)),
+        tema.kpi('Existencia actual', tema.entero(existencia), nota='Todas las sucursales'),
+        tema.kpi('Clase ABC', producto.get('clase_abc') or 'Sin clase', nota='Clasificación histórica por ingreso')])
+    st.write('')
     st.caption('Intervalo total aproximado del 80 %, suponiendo independencia entre semanas y sucursales. Puede subestimar la incertidumbre si los errores están correlacionados.')
-    tema.seccion('Historia y próximas cuatro semanas', 'La banda muestra el intervalo del 80 %; una banda amplia indica mayor incertidumbre.')
     fig = go.Figure(go.Scatter(x=historia.semana_inicio, y=historia.unidades, name='Venta real', mode='lines', line_color=tema.CONTEXTO))
     fig.add_scatter(x=futuro.semana_inicio, y=futuro.limite_inferior, mode='lines', line_color=tema.DESTACADO, line_width=0, showlegend=False, hoverinfo='skip')
     fig.add_scatter(x=futuro.semana_inicio, y=futuro.limite_superior, mode='lines', fill='tonexty', fillcolor='rgba(46,90,156,0.16)', line_color=tema.DESTACADO, line_width=0, name='Intervalo 80 %', hovertemplate='Límite superior: %{y:,.0f}<extra></extra>')
@@ -54,8 +54,8 @@ def mostrar():
     fig.add_shape(type='line', x0=hoy, x1=hoy, y0=0, y1=1, yref='paper', line=dict(color=tema.TINTA_TENUE, dash='dot'))
     fig.add_annotation(x=hoy, y=1, yref='paper', text='Hoy · corte de datos', showarrow=False, font_color=tema.TINTA)
     fig.update_layout(yaxis_title='Unidades', xaxis_title='Semana', xaxis_tickformat='%m/%Y')
-    tema.grafica(fig, alto=420)
-    tema.seccion('Próxima semana por sucursal', 'Demanda esperada ordenada de mayor a menor para orientar la distribución.')
+    with tema.bloque('Historia y próximas cuatro semanas', 'La banda muestra el intervalo del 80 %; una banda amplia indica mayor incertidumbre'):
+        tema.grafica(fig, alto=420)
     filas = []
     for suc in interfaz.datos('/catalogos/sucursales'):
         pred = interfaz.datos('/pronosticos', id_producto=identificador, id_sucursal=suc['id_sucursal'])
@@ -65,8 +65,12 @@ def mostrar():
         marco = pd.DataFrame(filas).sort_values('demanda')
         fig = go.Figure(go.Bar(x=marco.demanda, y=marco.sucursal, orientation='h', marker_color=tema.DESTACADO, text=marco.demanda.round(1), textposition='outside', textfont_color=tema.TINTA, cliponaxis=False, hovertemplate='%{y}: %{x:,.1f} unidades<extra></extra>'))
         fig.update_layout(margin=dict(r=60), xaxis_title='Unidades esperadas')
-        tema.grafica(fig, alto=400)
-    tema.seccion('Qué tan bueno es el modelo', 'WAPE mide el error absoluto como porcentaje del volumen real; un valor menor es mejor.')
+        izq, der = st.columns(2, gap='medium')
+        with izq:
+            with tema.bloque('Próxima semana por sucursal', 'Demanda esperada, de mayor a menor'):
+                tema.grafica(fig, alto=400)
+    else:
+        izq, der = st.columns(2, gap='medium')
     metricas = interfaz.datos('/modelo').get('metricas', {})
     fig = go.Figure()
     horizontes = [h for h in ['h1', 'h2', 'h3', 'h4'] if h in metricas]
@@ -74,4 +78,6 @@ def mostrar():
         valores = [metricas[h][clave]*100 for h in horizontes]
         fig.add_bar(y=['Semana '+h[1:] for h in horizontes], x=valores, orientation='h', name=nombre, marker_color=color, text=[f'{v:.1f} %' for v in valores], textposition='outside', textfont_color=tema.TINTA, cliponaxis=False, hovertemplate='%{y}: %{x:.1f} %<extra>'+nombre+'</extra>')
     fig.update_layout(barmode='group', xaxis_title='WAPE por par sucursal-producto (%)', margin=dict(r=60))
-    tema.grafica(fig)
+    with der:
+        with tema.bloque('Qué tan bueno es el modelo', 'WAPE: error absoluto como porcentaje del volumen real; menor es mejor'):
+            tema.grafica(fig, alto=400)

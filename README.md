@@ -90,9 +90,15 @@ El dashboard consume únicamente la API. Configura `DATACORE_API_URL` (por defec
 `http://127.0.0.1:8000`) y, si el servicio exige autenticación, `DATACORE_API_KEY`
 en el entorno del proceso. Las lecturas se conservan en caché durante cinco minutos.
 
-- **Inicio:** indicadores ejecutivos, ventas mensuales y salud de la plataforma.
+- **Inicio:** indicadores ejecutivos, salud del inventario, mapa de la red de 12 sucursales con sus alertas, ventas mensuales y estado de la plataforma.
 - **Ventas:** fechas y sucursal, serie diaria, media móvil, categorías y clasificación ABC histórica.
 - **Inventario:** estados, cobertura por sucursal y tasa mensual de desabasto.
 - **Alertas:** pendientes por tipo y sucursal, con acción para marcarlas como atendidas.
 - **Pronóstico:** búsqueda por nombre/SKU, historia de 52 semanas, cuatro semanas previstas e indicadores del modelo.
 - **Calidad y operación:** hallazgos por regla y acción, ejecuciones del ETL e incidencias mensuales.
+
+**Sistema visual** (`src/datacore/dashboard/tema.py`): barra lateral marino con el logotipo oscuro, encabezado
+tipo folio con el corte de datos, indicadores en franjas, bloques blancos por tema y tipografía IBM Plex Sans
+(licencia OFL) alojada en `src/datacore/dashboard/static/fuentes`, servida con `enableStaticServing` de
+`.streamlit/config.toml`, así que funciona sin internet. Los contornos del mapa están en
+`src/datacore/dashboard/datos/mexico_estados.json`.

@@ -43,7 +43,6 @@ def mostrar():
     tema.encabezado('Calidad y operación', 'Revisa la confiabilidad de la carga, los eventos atípicos y la continuidad de la plataforma.')
     calidad, anomalias, incidencias, plataforma = st.tabs(['Calidad de datos', 'Anomalías', 'Incidencias', 'Plataforma'])
     with calidad:
-        tema.seccion('Hallazgos de la última carga', 'Distingue los registros corregidos, marcados para revisión y rechazados por cada regla.')
         marco = interfaz.tabla('/calidad/ultima-carga')
         if not marco.empty:
             matriz = marco.pivot_table(index='regla', columns='accion', values='conteo', aggfunc='sum', fill_value=0)
@@ -54,13 +53,15 @@ def mostrar():
                     fig.add_bar(y=matriz.index, x=matriz[accion], orientation='h', name=accion.capitalize(), marker_color=tema.SERIES[i], hovertemplate='%{y}: %{x:,.0f}<extra>'+accion+'</extra>')
             fig.update_layout(barmode='stack', legend=dict(traceorder='normal'), xaxis_title='Hallazgos', hovermode='closest')
             fig.update_yaxes(tickvals=matriz.index, ticktext=[r.replace('_', ' ').capitalize() for r in matriz.index])
-            tema.grafica(fig, alto=max(380, len(matriz)*30))
-        tema.seccion('Ejecuciones del ETL', 'Compara filas leídas, cargadas y descartadas; revisa el estado y el mensaje de error.')
-        _tabla(interfaz.tabla('/etl/ejecuciones', limite=50))
+            with tema.bloque('Hallazgos de la última carga', 'Registros corregidos, marcados para revisión y rechazados por cada regla'):
+                tema.grafica(fig, alto=max(380, len(matriz)*30))
+        st.write('')
+        with tema.bloque('Ejecuciones del ETL', 'Filas leídas, cargadas y descartadas, con su estado y mensaje de error'):
+            _tabla(interfaz.tabla('/etl/ejecuciones', limite=50))
     with anomalias:
-        tema.seccion('Anomalías de tickets diarios', 'Las caídas y los picos señalan días para investigar. Se excluyen eventos festivos conocidos.')
+        caja = tema.bloque('Anomalías de tickets diarios', 'Las caídas y los picos señalan días para investigar; se excluyen fechas festivas conocidas')
         opciones = interfaz.datos('/catalogos/sucursales')
-        sucursal = st.selectbox('Sucursal para anomalías', opciones, format_func=lambda s: s['codigo']+' · '+s['nombre'])
+        sucursal = caja.selectbox('Sucursal para anomalías', opciones, format_func=lambda s: s['codigo']+' · '+s['nombre'])
         if sucursal:
             diaria = interfaz.tabla('/ventas/diarias', id_sucursal=sucursal['id_sucursal'])
             puntos = interfaz.tabla('/anomalias', id_sucursal=sucursal['id_sucursal'])
@@ -77,10 +78,11 @@ def mostrar():
                     fig.add_scatter(x=g.fecha, y=g.valor, name='Caídas' if tipo == 'caida' else 'Picos', mode='markers', marker=dict(color=tema.SERIES[i], size=9, symbol='diamond' if tipo == 'caida' else 'triangle-up'), hovertemplate='%{x}: %{y:,.0f} tickets<extra>'+tipo+'</extra>')
             fig.update_yaxes(title='Tickets')
             fig.update_xaxes(tickformat='%m/%Y')
-            tema.grafica(fig, alto=420)
-            _tabla(puntos)
+            with caja:
+                tema.grafica(fig, alto=420)
+                _tabla(puntos)
     with incidencias:
-        tema.seccion('Incidencias mensuales', 'Compara la composición de los eventos reportados y consulta los que siguen abiertos.')
+        caja = tema.bloque('Incidencias mensuales', 'Composición de los eventos reportados cada mes')
         marco = interfaz.tabla('/incidencias/mensuales')
         tipos = ['FALLA_SISTEMA', 'DESABASTO', 'RETRASO_PROVEEDOR', 'MERCANCIA_DANADA', 'DIFERENCIA_INVENTARIO', 'QUEJA_CLIENTE']
         fig = go.Figure()
@@ -90,10 +92,12 @@ def mostrar():
                 nombre = tipo.replace('_', ' ').capitalize()
                 fig.add_bar(x=g.mes, y=g.total, name=nombre, marker_color=tema.SERIES[i], text=g.total if i == 5 else None, textposition='inside', textfont_color=tema.TINTA, hovertemplate='%{x}: %{y} incidencias<extra>'+nombre+'</extra>')
             fig.update_layout(barmode='stack', legend=dict(traceorder='normal'), yaxis_title='Incidencias', xaxis_tickformat='%m/%Y')
-            tema.grafica(fig, alto=420)
-            _tabla(marco.assign(tipo=marco.tipo.str.replace('_', ' ').str.capitalize()))
-        tema.seccion('Incidencias abiertas', 'Eventos abiertos o en proceso, ordenados por fecha de reporte.')
-        _tabla(interfaz.tabla('/incidencias/abiertas'))
+            with caja:
+                tema.grafica(fig, alto=420)
+                _tabla(marco.assign(tipo=marco.tipo.str.replace('_', ' ').str.capitalize()))
+        st.write('')
+        with tema.bloque('Incidencias abiertas', 'Eventos abiertos o en proceso, ordenados por fecha de reporte'):
+            _tabla(interfaz.tabla('/incidencias/abiertas'))
     with plataforma:
         tema.seccion('Estado de la plataforma', 'Disponibilidad actual de servicios y último resultado de los procesos principales.')
         salud = interfaz.datos('/salud')
@@ -101,10 +105,11 @@ def mostrar():
         estados = [('API', salud.get('estado') == 'ok'), ('Base de datos', salud.get('base_de_datos') == 'ok'), ('ETL', bool(etl.get('exitosa'))), ('Modelo activo', bool(modelo))]
         st.markdown(' '.join(tema.estado(nombre+' · '+('Disponible' if ok else 'Revisar'), 'bien' if ok else 'critico') for nombre, ok in estados), unsafe_allow_html=True)
         for titulo, descripcion, ruta in [('Últimos chequeos de monitoreo', 'Estado, latencia y detalle de cada componente revisado.', '/operacion/monitoreo'), ('Últimos respaldos', 'Verificado indica que la restauración de prueba coincidió con el origen.', '/operacion/respaldos'), ('Últimas corridas diarias', 'Resultado del proceso diario y detalle de sus pasos.', '/operacion/corridas')]:
-            tema.seccion(titulo, descripcion)
-            registros = interfaz.tabla(ruta)
-            _tabla(registros)
-            if ruta.endswith('corridas') and not registros.empty:
-                for corrida in registros.to_dict('records'):
-                    with st.expander('Pasos · '+str(corrida['inicio'])[:16]):
-                        _tabla(pd.DataFrame(corrida.get('pasos') or []))
+            st.write('')
+            with tema.bloque(titulo, descripcion.rstrip('.')):
+                registros = interfaz.tabla(ruta)
+                _tabla(registros)
+                if ruta.endswith('corridas') and not registros.empty:
+                    for corrida in registros.to_dict('records'):
+                        with st.expander('Pasos de la corrida del '+str(corrida['inicio'])[:16].replace('T', ' ')):
+                            _tabla(pd.DataFrame(corrida.get('pasos') or []))

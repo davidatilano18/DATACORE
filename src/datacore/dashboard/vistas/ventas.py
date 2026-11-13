@@ -100,33 +100,38 @@ def mostrar():
         actual = d.ingreso.sum()/d.tickets.sum() if campo == 'ticket_promedio' and d.tickets.sum() else d[campo].sum()
         anterior = previo.ingreso.sum()/previo.tickets.sum() if campo == 'ticket_promedio' and previo.tickets.sum() else previo[campo].sum()
         valor = {'ingreso': tema.mxn_corto, 'ticket_promedio': tema.mxn}.get(campo, tema.entero)(actual)
-        tarjetas.append(tema.tarjeta(titulo, valor, delta=_variacion(actual, anterior), delta_texto='vs. periodo anterior', serie=d[campo].tolist(), alto=160))
-    tema.fila_tarjetas(tarjetas)
-    tema.seccion('Ingreso diario y tendencia', 'La media de siete días permite distinguir la tendencia del movimiento diario.')
+        tarjetas.append(tema.kpi(titulo, valor, delta=_variacion(actual, anterior), delta_texto='vs. periodo anterior', serie=d[campo].tolist()))
+    tema.franja(tarjetas)
+    st.write('')
     fig = go.Figure(go.Bar(x=d.fecha, y=d.ingreso, name='Ingreso diario', marker_color=tema.CONTEXTO, hovertemplate='$ %{y:,.0f}<extra>Ingreso diario</extra>'))
     media = d.ingreso.rolling(7, min_periods=1).mean()
     fig.add_scatter(x=d.fecha, y=media, name='Media móvil 7 días', line_color=tema.DESTACADO, hovertemplate='$ %{y:,.0f}<extra>Media 7 días</extra>')
     fig.add_annotation(x=d.fecha.iloc[-1], y=media.iloc[-1], text='Media 7 días', showarrow=False, yshift=15, font_color=tema.TINTA)
     fig.update_yaxes(title='Ingreso (MXN)', tickprefix='$ ')
     fig.update_xaxes(tickformat='%d/%m')
-    tema.grafica(fig)
-    izq, der = st.columns(2)
+    with tema.bloque('Ingreso diario y tendencia', 'La media de siete días distingue la tendencia del movimiento diario'):
+        tema.grafica(fig)
+    izq, der = st.columns(2, gap='medium')
     with izq:
-        tema.seccion('Patrón semanal', 'Ingreso promedio por día de la semana; compara días con igual exposición.')
-        _patron_semanal(d)
+        with tema.bloque('Patrón semanal', 'Ingreso promedio por día de la semana'):
+            _patron_semanal(d)
     with der:
-        tema.seccion('Ventas por sucursal', 'Sucursales ordenadas por ingreso dentro del periodo seleccionado.')
-        suc = interfaz.tabla('/ventas/sucursales', desde=desde.isoformat(), hasta=hasta.isoformat())
-        if sucursal is not None:
-            suc = suc[suc.id_sucursal == sucursal]
-        _barras(suc, 'codigo', 'ingreso', 'ventas_sucursal')
-    tema.seccion('Mezcla por categoría', 'Participación en el ingreso. Cada categoría conserva su color en todos los filtros; '
-                 'las de menor peso histórico se agrupan en "Otras".')
+        with tema.bloque('Ventas por sucursal', 'Ordenadas por ingreso dentro del periodo'):
+            suc = interfaz.tabla('/ventas/sucursales', desde=desde.isoformat(), hasta=hasta.isoformat())
+            if sucursal is not None:
+                suc = suc[suc.id_sucursal == sucursal]
+            _barras(suc, 'codigo', 'ingreso', 'ventas_sucursal')
     cat = interfaz.tabla('/ventas/categorias', desde=desde.isoformat(), hasta=hasta.isoformat(), id_sucursal=sucursal)
     if not cat.empty:
-        _mezcla_categorias(cat)
-    tema.seccion('Clasificación ABC histórica', 'Todas las sucursales y todo el historial. El acumulado muestra la concentración del ingreso.')
-    buscar = st.text_input('Buscar SKU o producto')
+        with tema.bloque('Mezcla por categoría', 'Participación en el ingreso. Cada categoría conserva su color en todos los filtros; '
+                         'las de menor peso histórico se agrupan en "Otras".'):
+            _mezcla_categorias(cat)
+    _abc()
+
+
+def _abc():
+    caja = tema.bloque('Clasificación ABC histórica', 'Todas las sucursales y todo el historial; el acumulado muestra la concentración del ingreso')
+    buscar = caja.text_input('Buscar SKU o producto')
     abc = interfaz.tabla('/productos/abc', limite=5000)
     if not abc.empty:
         if buscar:
@@ -142,4 +147,4 @@ def mostrar():
         for c in visibles:
             if 'acumulad' in c:
                 configuracion[c] = st.column_config.ProgressColumn('Ingreso acumulado (%)', min_value=0, max_value=100, format='%.1f %%')
-        st.dataframe(abc[visibles], hide_index=True, column_config=configuracion, width='stretch')
+        caja.dataframe(abc[visibles], hide_index=True, column_config=configuracion, width='stretch')
