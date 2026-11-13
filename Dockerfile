@@ -1,7 +1,8 @@
 # DATACORE: una imagen para todos los servicios; SERVICIO elige qué arranca.
 #   api        → FastAPI en $PORT
 #   dashboard  → Streamlit en $PORT
-#   diario     → respaldo → ETL → modelo → monitoreo (para una tarea programada)
+#   diario     → respaldo → datos → ETL → modelo → monitoreo (para una tarea programada)
+#   inicial    → carga única de un servidor nuevo: base, datos simulados, ETL, modelo
 #   monitoreo  → chequeo de componentes
 FROM python:3.13-slim
 
@@ -19,7 +20,9 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 COPY db ./db
 COPY .streamlit ./.streamlit
-RUN pip install --no-deps . && useradd --create-home datacore && mkdir -p logs backups && chown -R datacore /app
+# Logotipo e ícono del dashboard (tema.py los busca en branding/png).
+COPY branding/png ./branding/png
+RUN pip install --no-deps . && useradd --create-home datacore && mkdir -p logs backups data reports/ml && chown -R datacore /app
 USER datacore
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
@@ -29,5 +32,6 @@ CMD ["sh", "-c", "case \"$SERVICIO\" in \
   api) exec uvicorn datacore.api.app:app --host 0.0.0.0 --port \"$PORT\" ;; \
   dashboard) exec streamlit run src/datacore/dashboard/Inicio.py --server.port \"$PORT\" --server.address 0.0.0.0 --server.headless true ;; \
   diario) exec python -m datacore.operacion diario ;; \
+  inicial) exec python -m datacore.operacion inicial ;; \
   monitoreo) exec python -m datacore.operacion monitoreo ;; \
   *) echo \"SERVICIO desconocido: $SERVICIO\" >&2; exit 2 ;; esac"]

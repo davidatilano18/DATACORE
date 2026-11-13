@@ -1,4 +1,4 @@
-"""Proceso diario: respaldo → ETL (incluye refresco de kpi) → modelo → anomalías → monitoreo.
+"""Proceso diario: respaldo → datos → ETL (incluye refresco de kpi) → modelo → anomalías → monitoreo.
 
 El respaldo va primero porque el ETL recarga `core` por completo: si algo
 sale mal, siempre existe la foto anterior. Cada paso queda en ops.corridas.
@@ -32,7 +32,7 @@ def _paso(nombre: str, funcion, pasos: list) -> object:
 
 def ejecutar(raw: Path | None = None, con_modelo: bool = True, verificar_respaldo: bool = True) -> bool:
     from ..etl.pipeline import ejecutar as etl
-    from . import monitoreo, respaldo
+    from . import datos, monitoreo, respaldo
 
     eng = engine("app")
     with eng.begin() as c:
@@ -44,6 +44,9 @@ def ejecutar(raw: Path | None = None, con_modelo: bool = True, verificar_respald
         archivo = _paso("respaldo", respaldo.respaldar, pasos)
         if verificar_respaldo:
             _paso("verificacion_respaldo", lambda: respaldo.verificar(archivo), pasos)
+        if raw is None:
+            # En un servidor nuevo no hay archivos de entrada: se generan los simulados (una sola vez).
+            _paso("datos", datos.asegurar_datos_simulados, pasos)
         _paso("etl", lambda: etl(raw or RAIZ / "data" / "raw", cargar_bd=True), pasos)
         if con_modelo:
             _paso("modelo", _publicar_modelo, pasos)
@@ -62,6 +65,26 @@ def ejecutar(raw: Path | None = None, con_modelo: bool = True, verificar_respald
                       {"e": "fallida" if error else "exitosa", "p": json.dumps(pasos),
                        "m": str(error)[:2000] if error else None, "i": id_corrida})
     return error is None
+
+
+def inicial() -> bool:
+    """Carga inicial en un servidor nuevo: base y esquema → datos → ETL → modelo → anomalías.
+    Sin respaldo (todavía no hay nada que respaldar). Idempotente: se puede volver a correr."""
+    from ..db_setup import aplicar_esquema, crear_roles_y_base
+    from ..etl.pipeline import ejecutar as etl
+    from . import datos
+
+    pasos: list[dict] = []
+    try:
+        _paso("base", lambda: (crear_roles_y_base(), aplicar_esquema(reset=False)), pasos)
+        _paso("datos", datos.asegurar_datos_simulados, pasos)
+        _paso("etl", lambda: etl(RAIZ / "data" / "raw", cargar_bd=True), pasos)
+        _paso("modelo", _publicar_modelo, pasos)
+        _paso("anomalias", _publicar_anomalias, pasos)
+    except Exception:
+        log.exception("la carga inicial falló en el paso %s", len(pasos))
+        return False
+    return True
 
 
 def _publicar_anomalias():

@@ -53,24 +53,64 @@ Un solo `Dockerfile`; la variable `SERVICIO` elige qué arranca:
 |---|---|
 | `api` (por defecto) | `uvicorn datacore.api.app:app` en `$PORT` |
 | `dashboard` | `streamlit run src/datacore/dashboard/Inicio.py` en `$PORT` |
-| `diario` | proceso diario (para una tarea programada) |
+| `diario` | proceso diario (para una tarea programada); genera los datos simulados si `data/raw` está vacío |
+| `inicial` | carga única de un servidor nuevo: base, datos, ETL, modelo y anomalías |
 | `monitoreo` | chequeo de componentes |
 
 Variables necesarias: `PG_HOST`, `PG_PORT`, `PG_DB`, `PG_APP_USER`, `PG_APP_PASSWORD`, `PG_LECTOR_USER`, `PG_LECTOR_PASSWORD` (y `PG_ADMIN_*` solo para `db_setup` y la verificación de respaldos). Opcionales: `DATACORE_API_KEY`, `DATACORE_CORS`, y en el dashboard `DATACORE_API_URL`.
 
-## Plan de despliegue en Railway (pendiente, no ejecutado)
+## Plan de despliegue en Azure for Students (elegido, no ejecutado)
 
-> **No se ha desplegado nada.** El equipo tiene otro proyecto en Railway con presentación el 22/10/2026. El despliegue se hará después y en un **proyecto de Railway separado**.
+> **No se ha desplegado nada.** El equipo eligió esta opción en la Fase 5 de mejoras (noviembre de 2026). La cuenta
+> de Railway del equipo **no se usa**: aloja otro proyecto escolar. Los precios y créditos se consultaron en fuentes de
+> terceros y deben confirmarse en el portal de Azure antes de crear recursos.
 
-1. Crear un proyecto nuevo en Railway, solo para DATACORE.
-2. Agregar el servicio **PostgreSQL** de Railway.
-3. Agregar el servicio **api** desde el repo de GitHub (usa el `Dockerfile`), con `SERVICIO=api` y las variables `PG_*` tomadas del servicio PostgreSQL. Definir `DATACORE_API_KEY`.
-4. Agregar el servicio **dashboard** desde el mismo repo, con `SERVICIO=dashboard`, `DATACORE_API_URL=<url interna de api>` y la misma `DATACORE_API_KEY`.
-5. Carga inicial desde una máquina con el repo: crear roles, esquema y datos apuntando las variables `PG_*` a Railway (`db_setup`, `generator`, `etl`, `ml publicar`), o restaurar un respaldo con `pg_restore`.
-6. Tarea programada (cron de Railway) con `SERVICIO=diario`.
-7. Probar `/salud` y el dashboard; correr `monitoreo` contra las URL públicas.
+**Por qué Azure for Students:** US$100 de crédito sin tarjeta con el correo de la UPQ; PostgreSQL Flexible Server
+B1ms incluido 750 h al mes durante 12 meses (alcanza para una base encendida todo el mes); la imagen Docker del
+proyecto corre sin cambios en Azure Container Apps. Se descartaron Render (US$35–45 al mes) y un servidor virtual
+propio (más barato, pero el equipo tendría que administrar seguridad y respaldos).
 
-Alternativa: un VPS (por ejemplo Contabo) con Docker o con systemd, usando `deploy/linux/datacore.cron`.
+**Tamaños medidos:** el reentrenamiento del modelo llega a ~1.2 GB de memoria (medido en noviembre de 2026), por lo
+que la tarea diaria necesita 2 GB. La API y el dashboard son ligeros (0.5 vCPU, 1 GB). La base ocupa ~280 MB y los
+datos simulados ~80 MB.
+
+| recurso de Azure | uso | tamaño |
+|---|---|---|
+| Azure Database for PostgreSQL Flexible Server | base `datacore` (core, ops, kpi) | Burstable B1ms, 32 GB |
+| Azure Container Registry | imagen `datacore` | Basic |
+| Container App `datacore-api` | `SERVICIO=api` | 0.5 vCPU, 1 GB, 1 réplica |
+| Container App `datacore-dashboard` | `SERVICIO=dashboard`, ingreso público | 0.5 vCPU, 1 GB, 1 réplica |
+| Container Apps Job `datacore-inicial` | `SERVICIO=inicial`, una sola vez | 1 vCPU, 2 GB |
+| Container Apps Job `datacore-diario` | `SERVICIO=diario`, cron `0 8 * * *` (2:00 en el Centro de México) | 1 vCPU, 2 GB |
+| Azure Files montado en `/app/data`, `/app/backups` y `/app/logs` | datos simulados, respaldos y bitácoras persistentes | 5 GB |
+
+### Pasos
+
+1. Activar Azure for Students con el correo institucional y crear un grupo de recursos `datacore`.
+2. Crear el PostgreSQL Flexible Server B1ms y permitir el acceso desde los servicios de Azure. El usuario
+   administrador se usa como `PG_ADMIN_*`.
+3. Crear el registro de contenedores y subir la imagen (`docker build` y `docker push`, o desde GitHub Actions).
+4. Crear el entorno de Container Apps, la cuenta de Azure Files y sus montajes.
+5. Definir los secretos del entorno: `PG_HOST`, `PG_PORT`, `PG_DB`, `PG_ADMIN_*`, `PG_APP_*`, `PG_LECTOR_*` y
+   `DATACORE_API_KEY`. Nunca van en el repositorio.
+6. Ejecutar una vez el Job `datacore-inicial` (`python -m datacore.operacion inicial`): crea roles, esquemas y vistas;
+   genera los datos simulados en el disco persistente; corre el ETL y publica el modelo y las anomalías (~15 min).
+7. Crear `datacore-api` (ingreso interno) y `datacore-dashboard` (ingreso público) con
+   `DATACORE_API_URL=<URL interna de la API>` y la misma `DATACORE_API_KEY`.
+8. Programar el Job `datacore-diario` y verificar `/salud`, el dashboard y `python -m datacore.operacion monitoreo`.
+
+### Riesgos
+
+- **El crédito y la base incluida vencen** (12 meses o antes, según los términos vigentes). Conviene una alerta de
+  presupuesto en el portal y apagar los recursos después de la evaluación.
+- **El consumo de las Container Apps encendidas todo el mes** sale del crédito si supera la cuota gratuita; con
+  0.5 vCPU por servicio se estima bajo, pero hay que revisarlo en la primera semana.
+- **Los datos son simulados y estáticos:** la tarea diaria vuelve a cargar los mismos archivos. Sirve para demostrar la
+  operación (respaldo, ETL, modelo, monitoreo), no para recibir datos nuevos.
+- **La configuración es más compleja que en un servidor único** (registro, red, montajes, secretos). Se recomienda
+  documentar cada recurso creado.
+
+Alternativa si se agota el crédito: un servidor virtual con Docker Compose y `deploy/linux/datacore.cron`.
 
 El dashboard expone las bitácoras mediante las rutas protegidas `/operacion/monitoreo`,
 `/operacion/respaldos`, `/operacion/corridas` e `/incidencias/abiertas`, con límite de filas validado.

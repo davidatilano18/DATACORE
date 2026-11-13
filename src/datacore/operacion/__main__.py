@@ -2,7 +2,8 @@
   python -m datacore.operacion respaldo [--verificar]   respaldo con pg_dump (y prueba de restauración)
   python -m datacore.operacion verificar [ARCHIVO]      restaura un respaldo en una base temporal y compara
   python -m datacore.operacion monitoreo                chequeo de componentes → ops.monitoreo
-  python -m datacore.operacion diario [--sin-modelo]    respaldo → ETL → modelo → monitoreo
+  python -m datacore.operacion diario [--sin-modelo]    respaldo → datos → ETL → modelo → monitoreo
+  python -m datacore.operacion inicial                  carga inicial de un servidor nuevo (base, datos, ETL, modelo)
 """
 
 import argparse
@@ -22,6 +23,7 @@ def main() -> int:
     d = sub.add_parser("diario")
     d.add_argument("--sin-modelo", action="store_true")
     d.add_argument("--sin-verificar", action="store_true")
+    sub.add_parser("inicial")
     args = parser.parse_args()
 
     if args.accion == "respaldo":
@@ -34,6 +36,9 @@ def main() -> int:
     if args.accion == "monitoreo":
         from .monitoreo import revisar
         return 1 if any(r["estado"] == "falla" for r in revisar()) else 0
+    if args.accion == "inicial":
+        from .diario import inicial
+        return 0 if inicial() else 1
     from .diario import ejecutar
     return 0 if ejecutar(con_modelo=not args.sin_modelo, verificar_respaldo=not args.sin_verificar) else 1
 
