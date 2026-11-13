@@ -165,7 +165,7 @@ Con DATACORE, NexaTech habría perdido 14 % menos ventas manteniendo 12 % menos 
 
 La Figura 4.24 muestra por qué el resultado no depende de un solo cuantil. Cada punto azul es la política DATACORE con un cuantil distinto: los cuantiles altos compran nivel de servicio con inventario y los bajos hacen lo contrario. La política actual queda arriba y a la derecha de esa curva: pierde más ventas y mantiene más inventario que DATACORE en los cuantiles cercanos al calibrado.
 
-[FIGURA impacto_frontera.png 15] Ventas perdidas contra inventario inmovilizado en 2025, por política de reposición
+[FIGURA impacto_frontera.png 15] Ventas perdidas contra inventario inmovilizado por política, 2025
 [NOTA] Elaboración propia con base en reports/ml/impacto_metricas.csv.
 
 El resultado tiene límites que conviene declarar. Los pronósticos se calcularon con la historia real, la de la política actual, y no con la que habría generado DATACORE; la corrección de censura compensa una parte de esa diferencia. Además, el costo de mantener inventario es un supuesto de la industria y el resultado vale para estos datos simulados.

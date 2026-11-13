@@ -126,35 +126,35 @@ El dashboard se construyó con Streamlit y consume únicamente la API, nunca la 
 | Calidad y operación | Hallazgos de la última carga; ejecuciones del ETL; anomalías; incidencias; estado de respaldos, monitoreo y corridas. | Sistemas |
 [NOTA] Elaboración propia.
 
-La página de Inicio (Figura 4.14) funciona como resumen ejecutivo. Abre con un encabezado tipo folio que muestra el corte de datos y una franja con el ingreso, los tickets y el ticket promedio de los últimos 12 meses y su variación frente al año anterior. Debajo, una barra reparte los 4,800 pares sucursal-producto por estado de inventario, seguida de las alertas pendientes de cada tipo. Después aparece el mapa de la red de sucursales, en el que el tamaño de cada punto es su ingreso y un anillo rojo marca las tres con más alertas, y al final el ingreso mensual del año en curso contra los dos anteriores.
+La página de Inicio (Figura 4.14) funciona como resumen ejecutivo. Abre con un encabezado tipo folio que muestra el corte de datos y una franja con el ingreso, los tickets, el ticket promedio y los clientes activos de los últimos 12 meses, con su variación frente al año anterior. Debajo, una barra reparte los 4,800 pares sucursal-producto por estado de inventario, seguida de las alertas pendientes de cada tipo. Después aparece el mapa de la red de sucursales, en el que el tamaño de cada punto es su ingreso y un anillo rojo marca las tres con más alertas. La página cierra con una tarjeta por sucursal y el ingreso mensual del año en curso contra los dos anteriores.
 
-[FIGURA dash_inicio.png 14] Página de Inicio del dashboard
-[NOTA] Elaboración propia. Captura del dashboard con datos simulados al 31 de diciembre de 2025.
+[FIGURA dash_inicio.png 13] Página de Inicio del dashboard
+[NOTA] Elaboración propia. Captura con datos simulados al 31 de diciembre de 2025; se omite la barra lateral de navegación.
 
 La página de Ventas (Figura 4.15) permite elegir el periodo y la sucursal. Muestra el ingreso diario con su media móvil de siete días, el patrón por día de la semana, el ranking de sucursales y la mezcla por categoría.
 
-[FIGURA dash_ventas.png 14] Página de Ventas del dashboard
-[NOTA] Elaboración propia. Captura con el filtro de los últimos 30 días.
+[FIGURA dash_ventas.png 15.5] Página de Ventas del dashboard
+[NOTA] Elaboración propia. Captura con el filtro de los últimos 30 días; se muestra la parte superior de la página.
 
 La página de Inventario (Figura 4.16) clasifica los 4,800 pares en cinco estados: sin existencia, bajo mínimo, exceso, sin rotación y normal. Incluye un mapa de calor del desabasto mensual por sucursal en el que se distingue la apertura de las sucursales QRO03 y MOR01.
 
-[FIGURA dash_inventario.png 14] Página de Inventario del dashboard
-[NOTA] Elaboración propia.
+[FIGURA dash_inventario.png 15.5] Página de Inventario del dashboard
+[NOTA] Elaboración propia. Se muestra la parte superior de la página.
 
 La página de Alertas (Figura 4.17) es la herramienta operativa principal. Lista las alertas pendientes; las de desabasto traen la cantidad sugerida y la fecha límite de pedido, y todas su motivo principal. Al seleccionar filas aparece la explicación completa de cada alerta. La página permite filtrar, marcar como atendidas las alertas revisadas y ver su composición por sucursal para repartir el trabajo.
 
-[FIGURA dash_alertas.png 14] Página de Alertas del dashboard
-[NOTA] Elaboración propia.
+[FIGURA dash_alertas.png 15.5] Página de Alertas del dashboard
+[NOTA] Elaboración propia. Se muestra la parte superior de la página.
 
 La página de Pronóstico (Figura 4.18) permite buscar un producto y ver su venta de las últimas 52 semanas junto con el pronóstico de las próximas cuatro y su banda de incertidumbre. También desglosa la demanda esperada por sucursal y compara la precisión del modelo con la media móvil.
 
 [FIGURA dash_pronostico.png 14] Página de Pronóstico del dashboard
-[NOTA] Elaboración propia.
+[NOTA] Elaboración propia. Se muestra la parte superior de la página.
 
 La página de Calidad y operación (Figura 4.19) muestra cuántos registros corrigió, marcó o rechazó cada regla en la última carga y el resultado de cada ejecución del ETL, entre otras pestañas sobre anomalías, incidencias y el estado de la plataforma.
 
-[FIGURA dash_calidad.png 14] Página de Calidad y operación del dashboard
-[NOTA] Elaboración propia.
+[FIGURA dash_calidad.png 15.5] Página de Calidad y operación del dashboard
+[NOTA] Elaboración propia. Se muestra la parte superior de la página.
 
 ### 4.1.9 Octava etapa: operación, respaldos y monitoreo
 

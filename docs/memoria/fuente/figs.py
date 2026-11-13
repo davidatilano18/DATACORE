@@ -250,3 +250,20 @@ ax.set_ylabel("F1 (2025, fuera de muestra)"); ax.set_ylim(0.2, 0.32)
 ax.grid(axis="y", color="#E3E6EC"); ax.set_axisbelow(True); ax.legend(frameon=False, ncol=2, loc="lower right")
 fig.savefig(OUT / "alertas_f1_bloques.png"); plt.close(fig)
 print("figuras de mejoras listas")
+
+# 12. Capturas del dashboard recortadas para la memoria: sin la barra lateral y solo la sección principal, -----------
+#     para que se lean al ancho de la página. Las capturas completas están en reports/dashboard/.
+from PIL import Image  # noqa: E402
+
+RECORTES = {  # (x0, y0, x1, y1) en píxeles de la captura de 1440 × 1400
+    "inicio": (360, 30, 1380, 1260),
+    "ventas": (360, 30, 1380, 860),
+    "inventario": (360, 30, 1380, 905),
+    "alertas": (360, 30, 1380, 985),
+    "pronostico": (360, 30, 1380, 1060),
+    "calidad": (360, 30, 1380, 940),
+}
+CAPTURAS = Path(__file__).resolve().parents[3] / "reports/dashboard"
+for nombre, caja in RECORTES.items():
+    Image.open(CAPTURAS / f"{nombre}.png").crop(caja).save(OUT / f"dash_{nombre}.png", optimize=True)
+print("capturas recortadas")

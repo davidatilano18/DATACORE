@@ -8,7 +8,7 @@ La decisión de diseño más valiosa fue construir una verdad de referencia desd
 
 La etapa de mejoras llevó la plataforma de funcionar a demostrar su valor. Una simulación de 2025 sobre la demanda real mostró que reponer con DATACORE habría reducido 14 % las ventas perdidas y 12 % el inventario inmovilizado, con un beneficio neto estimado de 346 mil pesos al año. Las alertas de desabasto pasaron a ser más precisas, a recomendar cuánto y cuándo pedir y a explicar su porqué en lenguaje sencillo.
 
-Los resultados principales confirman el valor de la plataforma. El ETL detecta los 18 tipos de defecto sin falsos positivos y recupera información en lugar de solo descartarla. El modelo de demanda supera a los métodos de referencia en todos los casos evaluados, con más ventaja en la temporada alta, cuando un error cuesta más. Las alertas de desabasto anticipan más de la mitad de los faltantes reales, con un costo en alertas de más que se midió y se explicó. La operación incluye respaldos que se restauran y se comparan, monitoreo, bitácoras y pruebas automáticas en cada cambio.
+Los resultados principales confirman el valor de la plataforma. El ETL detecta los 18 tipos de defecto sin falsos positivos y recupera información en lugar de solo descartarla. El modelo de demanda supera a los métodos de referencia en todos los casos evaluados, con más ventaja en la temporada alta, cuando un error cuesta más. La alerta de desabasto, elegida fuera de muestra, acierta en una de cada cuatro ocasiones, contra una de cada seis y media de la regla original, y cada alerta indica cuánto pedir, para cuándo y por qué. La operación incluye respaldos que se restauran y se comparan, monitoreo, bitácoras y pruebas automáticas en cada cambio.
 
 ## 5.2 Cumplimiento de los objetivos
 
@@ -55,7 +55,7 @@ El proyecto tiene limitaciones que deben considerarse al interpretar sus resulta
 
 A partir de las limitaciones se proponen las siguientes mejoras:
 
-- Desplegar la plataforma en un servidor o servicio de nube, con la tarea diaria programada y el monitoreo contra las direcciones públicas.
+- Desplegar la plataforma en Azure for Students siguiendo el plan documentado, con la tarea diaria programada y el monitoreo contra las direcciones públicas.
 - Descontar de la cantidad sugerida los pedidos en camino, registrando las órdenes de compra en la base.
 - Volver a calcular los pronósticos de la simulación con la historia que habría generado DATACORE, no con la de la política actual.
 - Registrar la fecha de baja de los productos y modelar su ciclo de vida.
@@ -95,7 +95,7 @@ Durante el desarrollo del proyecto, Ricardo Leonel Ordaz Aguilar comprendió que
 [REF] Kimball, R., y Ross, M. (2013). *The data warehouse toolkit: The definitive guide to dimensional modeling* (3.ª ed.). Wiley.
 [REF] Kleppmann, M. (2017). *Designing data-intensive applications*. O'Reilly Media.
 [REF] Merkel, D. (2014). Docker: Lightweight Linux containers for consistent development and deployment. *Linux Journal, 2014*(239), Artículo 2.
-[REF] Organización de las Naciones Unidas. (2015). *Transformar nuestro mundo: la Agenda 2030 para el Desarrollo Sostenible* (A/RES/70/1).
+[REF] Organización de las Naciones Unidas. (2015). *Transformar nuestro mundo: la Agenda 2030 para el Desarrollo Sostenible* (A/RES/70/1). https://undocs.org/es/A/RES/70/1
 [REF] Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A., Cournapeau, D., Brucher, M., Perrot, M., y Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. *Journal of Machine Learning Research, 12*, 2825–2830.
 [REF] Rousseeuw, P. J., y Croux, C. (1993). Alternatives to the median absolute deviation. *Journal of the American Statistical Association, 88*(424), 1273–1283. https://doi.org/10.1080/01621459.1993.10476408
 [REF] Silver, E. A., Pyke, D. F., y Thomas, D. J. (2017). *Inventory and production management in supply chains* (4.ª ed.). CRC Press.
@@ -205,7 +205,7 @@ Las Tablas A.1 a A.8 describen las tablas del esquema core y la Tabla A.9 las de
 | calidad_hallazgos | Una fila por registro afectado por una regla: regla, acción y valores antes y después. |
 | modelos | Versiones de modelos con sus métricas en JSONB y la marca del modelo activo. |
 | predicciones_demanda | Pronóstico semanal por sucursal y producto con su intervalo. |
-| alertas_inventario | Alertas de desabasto, exceso y sin rotación, con su cobertura y su estado de atención. |
+| alertas_inventario | Alertas de desabasto, exceso y sin rotación, con su cobertura, su motivo, su estado de atención y, en el desabasto, el pedido sugerido y la fecha límite. |
 | anomalias | Días-sucursal con valor observado, esperado y puntaje de la prueba. |
 | respaldos, monitoreo, corridas | Evidencia de la operación: respaldos verificados, chequeos y pasos del proceso diario. |
 
@@ -220,23 +220,26 @@ La Tabla A.10 resume los comandos para instalar y operar la plataforma desde cer
 | Ejecutar el ETL con evaluación | python -m datacore.etl --evaluar |
 | Evaluar el modelo contra los métodos de referencia | python -m datacore.ml evaluar |
 | Entrenar, pronosticar y generar alertas | python -m datacore.ml publicar |
+| Simular el impacto en dinero | python -m datacore.ml impacto |
+| Comparar las reglas de alerta fuera de muestra | python -m datacore.ml alertas |
 | Levantar la API | python -m uvicorn datacore.api.app:app --port 8000 |
 | Levantar el dashboard | python -m streamlit run src/datacore/dashboard/Inicio.py |
 | Respaldar y verificar | python -m datacore.operacion respaldo --verificar |
 | Revisar el estado de la plataforma | python -m datacore.operacion monitoreo |
 | Ejecutar el proceso diario | python -m datacore.operacion diario |
+| Cargar todo en un servidor nuevo | python -m datacore.operacion inicial |
 | Ejecutar las pruebas | python -m pytest -q |
 [NOTA] Elaboración propia con base en docs/manual_tecnico.md.
 
 ## Anexo 3. Guía rápida para el usuario del dashboard
 
-El dashboard se abre en el navegador, en la dirección que proporcione el área de sistemas. Los datos se actualizan una vez al día, de madrugada, y la fecha de la última actualización aparece en el estado de la plataforma de la página de Inicio. Los montos están en pesos mexicanos. Las tablas se pueden ordenar con un clic en el encabezado y descargar en formato CSV. La Tabla A.11 explica cómo interpretar cada tipo de alerta.
+El dashboard se abre en el navegador, en la dirección que proporcione el área de sistemas. Los datos se actualizan una vez al día, de madrugada, y la fecha de corte aparece en el sello «Corte de datos» del encabezado de cada página. Los montos están en pesos mexicanos. Las tablas se pueden ordenar con un clic en el encabezado y descargar en formato CSV. La Tabla A.11 explica cómo interpretar cada tipo de alerta.
 
 [TABLA] Interpretación de las alertas para el usuario
 | Alerta | Qué significa | Qué hacer |
-| RIESGO_DESABASTO | La existencia probablemente no alcanza hasta que llegue un nuevo pedido. | Revisar y adelantar el pedido al proveedor. |
+| RIESGO_DESABASTO | La existencia probablemente no alcanza hasta que llegue un nuevo pedido. | Revisar el motivo y pedir la cantidad sugerida antes de la fecha límite. |
 | EXCESO_INVENTARIO | Al ritmo pronosticado, la existencia dura más de 180 días. | Frenar las compras; considerar promociones o traspasos. |
 | SIN_ROTACION | Hay piezas, no se vende nada desde hace 13 semanas y no se espera demanda. | Evaluar liquidar o descontinuar. |
 [NOTA] Elaboración propia con base en docs/manual_usuario.md.
 
-La alerta de desabasto es conservadora a propósito: en las pruebas anticipó alrededor de la mitad de los faltantes reales, a cambio de varias alertas que al final no terminaron en faltante. Debe usarse como lista de revisión y no como orden de compra automática. Para registrar que una alerta ya se atendió, se selecciona en la lista y se pulsa el botón Marcar como atendidas.
+Las alertas de desabasto aparecen ordenadas por fecha límite, con su cantidad sugerida y su motivo; al seleccionar filas se muestra la explicación completa. Antes de comprar conviene descontar los pedidos en camino, que la base no registra. Para marcar una alerta como atendida, se selecciona y se pulsa Marcar como atendidas.
