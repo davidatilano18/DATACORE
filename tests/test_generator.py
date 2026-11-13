@@ -75,6 +75,9 @@ def test_salidas_de_inventario_igual_a_ventas(gt):
     m = gt["movimientos_inventario"]
     salidas = -m[m["tipo"] == "SALIDA_VENTA"].groupby(["fecha", "id_sucursal", "id_producto"])["cantidad"].sum()
     vendido.index.names = salidas.index.names
+    # pandas 3.1 conserva la resolución de origen (us o ms) al agrupar; se igualan las fechas antes de comparar.
+    tipo_fecha = salidas.index.levels[0].dtype
+    vendido.index = vendido.index.set_levels(vendido.index.levels[0].astype(tipo_fecha), level=0)
     pd.testing.assert_series_equal(vendido.sort_index(), salidas.sort_index(), check_names=False)
 
 
