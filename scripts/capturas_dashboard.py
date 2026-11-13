@@ -47,18 +47,22 @@ class CDP:
                 return msg.get("result", {})
 
 
-async def capturar(url_base: str, salida: Path, ancho: int, alto: int, puerto: int) -> None:
+async def capturar(url_base: str, salida: Path, ancho: int, alto: int, puerto: int, movil: bool = False) -> None:
     info = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{puerto}/json/version").read())
     async with connect(info["webSocketDebuggerUrl"], max_size=200 * 2**20) as navegador:
         destino = await CDP(navegador).llamar("Target.createTarget", url="about:blank")
     objetivos = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{puerto}/json/list").read())
     ws_pagina = next(o["webSocketDebuggerUrl"] for o in objetivos if o["id"] == destino["targetId"])
     async with connect(ws_pagina, max_size=200 * 2**20) as ws:
-        await _recorrer(CDP(ws), url_base, salida, ancho, alto)
+        await _recorrer(CDP(ws), url_base, salida, ancho, alto, movil)
 
 
-async def _recorrer(cdp: CDP, url_base: str, salida: Path, ancho: int, alto: int) -> None:
-    await cdp.llamar("Emulation.setDeviceMetricsOverride", width=ancho, height=alto, deviceScaleFactor=1, mobile=False)
+async def _recorrer(cdp: CDP, url_base: str, salida: Path, ancho: int, alto: int, movil: bool = False) -> None:
+    # En modo móvil se emula un teléfono (pantalla táctil, escala 2) para revisar el diseño adaptable.
+    await cdp.llamar("Emulation.setDeviceMetricsOverride", width=ancho, height=alto,
+                     deviceScaleFactor=2 if movil else 1, mobile=movil)
+    if movil:
+        await cdp.llamar("Emulation.setTouchEmulationEnabled", enabled=True)
     salida.mkdir(parents=True, exist_ok=True)
     for nombre, ruta in PAGINAS.items():
         await cdp.llamar("Page.navigate", url=f"{url_base.rstrip('/')}/{ruta}")
@@ -80,6 +84,7 @@ def main() -> None:
     p.add_argument("--salida", type=Path, default=Path("reports/dashboard"))
     p.add_argument("--ancho", type=int, default=1440)
     p.add_argument("--alto", type=int, default=1400)
+    p.add_argument("--movil", action="store_true", help="emula un teléfono (usa con --ancho 390)")
     a = p.parse_args()
     exe = next((n for n in NAVEGADORES if Path(n).exists() or shutil.which(n)), None)
     if not exe:
@@ -96,7 +101,7 @@ def main() -> None:
                     break
                 except OSError:
                     time.sleep(0.5)
-            asyncio.run(capturar(a.url, a.salida, a.ancho, a.alto, puerto))
+            asyncio.run(capturar(a.url, a.salida, a.ancho, a.alto, puerto, a.movil))
         finally:
             proc.terminate()
             proc.wait(timeout=10)

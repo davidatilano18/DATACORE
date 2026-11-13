@@ -6,7 +6,7 @@ Para probar la plataforma se simularon tres años de operación (2023 a 2025): 1
 
 El módulo de inteligencia artificial pronostica la demanda semanal de los 4,800 pares sucursal-producto con un modelo de gradient boosting con pérdida Poisson. Validado con origen móvil sobre las 52 semanas de 2025, alcanza un WAPE por producto y semana de 26.9 %, frente a 28.8 % de la media móvil, el mejor de cuatro métodos de referencia, y supera a todos ellos en los 12 casos evaluados. Con el pronóstico se generan alertas de riesgo de desabasto, exceso de inventario y productos sin rotación, cada una con su explicación y, en el caso del desabasto, con una cantidad y una fecha límite de pedido.
 
-Una simulación de 2025 sobre la demanda real muestra que reponer con DATACORE habría reducido 14 % las ventas perdidas y 12 % el inventario inmovilizado, con un beneficio neto estimado de 346 mil pesos al año. La plataforma está desplegada en la nube con una API REST, un dashboard público y un proceso diario programado, con respaldos verificados, monitoreo, un proceso diario, un contenedor Docker e integración continua con 116 pruebas automatizadas.
+Una simulación de 2025 sobre la demanda real muestra que reponer con DATACORE habría reducido 14 % las ventas perdidas y 12 % el inventario inmovilizado, con un beneficio neto estimado de 346 mil pesos al año. La plataforma está desplegada en la nube con una API REST, un dashboard público y un proceso programado, con respaldos verificados, monitoreo, un proceso diario, un contenedor Docker e integración continua con 116 pruebas automatizadas.
 
 **Palabras clave:** ingeniería de datos, ETL, calidad de datos, pronóstico de demanda, gestión de inventarios.
 
@@ -18,6 +18,6 @@ Three years of operations (2023 to 2025) were simulated to test the platform: 18
 
 The artificial-intelligence module forecasts weekly demand for the 4,800 branch-product pairs with a gradient boosting model trained with a Poisson loss. Validated with a rolling origin over the 52 weeks of 2025, it reaches a product-week WAPE of 26.9 %, compared with 28.8 % for the moving average, the best of four baseline methods, and it outperforms all of them in the 12 evaluated cases. The forecast feeds alerts for stock-out risk, excess inventory and non-moving products, each with its explanation and, for stock-outs, a suggested order quantity and deadline.
 
-A simulation of 2025 on actual demand shows that replenishing with DATACORE would have cut lost sales by 14 % and inventory by 12 %, for an estimated net benefit of 346 thousand pesos a year. The platform is deployed in the cloud with a REST API, a public dashboard and a scheduled daily process, with verified backups, monitoring, a daily process, a Docker container, and continuous integration with 116 automated tests.
+A simulation of 2025 on actual demand shows that replenishing with DATACORE would have cut lost sales by 14 % and inventory by 12 %, for an estimated net benefit of 346 thousand pesos a year. The platform is deployed in the cloud with a REST API, a public dashboard and a scheduled process, with verified backups, monitoring, a daily process, a Docker container, and continuous integration with 116 automated tests.
 
 **Keywords:** data engineering, ETL, data quality, demand forecasting, inventory management.

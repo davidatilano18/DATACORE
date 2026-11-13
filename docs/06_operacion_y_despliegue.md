@@ -68,7 +68,7 @@ cuenta del equipo.
 |---|---|---|
 | `datacore-dashboard` | `SERVICIO=dashboard` | https://datacore-dashboard-production.up.railway.app |
 | `datacore-api` | `SERVICIO=api`, protegida con `X-API-Key` (salvo `/salud`) | https://datacore-api-production.up.railway.app |
-| `datacore-diario` | `SERVICIO=diario`, tarea programada `0 8 * * *` (2:00 en el Centro de México), sin reinicio | — |
+| `datacore-diario` | `SERVICIO=diario`, tarea programada `0 8 * * 1` (lunes 2:00 en el Centro de México), sin reinicio | — |
 | `Postgres` | PostgreSQL 18 administrado por Railway, con volumen persistente | red privada |
 
 **Cómo se desplegó** (`deploy/railway/desplegar.sh`, repetible):
@@ -101,8 +101,14 @@ sin rotación; 13,334 unidades de pedido sugerido); la API responde 401 sin clav
 - **Subidas desde una copia limpia.** En Windows, `railway up` desde la carpeta de trabajo falla con "Acceso denegado"
   si hay bitácoras abiertas; el script sube solo los archivos versionados. No se usa `railway service redeploy`:
   reconstruye sin el Dockerfile.
-- **Costo:** se consume del plan de la cuenta de Railway del equipo; conviene revisar `railway usage` y apagar los
-  servicios después de la evaluación.
+- **Costo (medido el 13/11/2026):** en reposo la base usa ~620 MB, el dashboard ~190 MB y la API ~75 MB de memoria, con
+  CPU casi en cero; encendidos todo el mes serían ~US$9. Para bajarlo:
+  - **Apagado automático** (`sleepApplication`) en el dashboard, la API y PostgreSQL: se duermen sin tráfico y despiertan
+    con la primera visita o con la tarea programada; la primera carga tarda unos segundos más.
+  - **Proceso semanal** (`0 8 * * 1`, lunes 2:00): los datos simulados no cambian, así que no hace falta a diario.
+  - **Límite de gasto** de la cuenta: aviso a US$7 y tope a US$10 al mes (`railway usage limit`). El tope aplica a toda
+    la cuenta y detiene los servicios al alcanzarlo.
+  - Después de la evaluación conviene apagar o borrar el proyecto `datacore`.
 
 ## Alternativa documentada: Azure for Students (no utilizada)
 

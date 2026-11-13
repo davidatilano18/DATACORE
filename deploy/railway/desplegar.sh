@@ -8,7 +8,8 @@
 #   bash deploy/railway/desplegar.sh servicios   # crea API, dashboard y operación con sus variables
 #   bash deploy/railway/desplegar.sh inicial     # carga única: roles, esquema, datos simulados, ETL y modelo
 #   bash deploy/railway/desplegar.sh apps        # sube la imagen a la API y al dashboard y les da dominio público
-#   bash deploy/railway/desplegar.sh diario      # convierte "operación" en la tarea diaria (2:00, Centro de México)
+#   bash deploy/railway/desplegar.sh diario      # convierte "operación" en tarea programada (lunes 2:00, Centro de México)
+#   bash deploy/railway/desplegar.sh ahorro      # apagado automático de dashboard, API y base sin tráfico
 #   bash deploy/railway/desplegar.sh estado      # servicios y ligas públicas
 #
 # Las contraseñas se generan la primera vez en deploy/railway/secretos.env (no se versiona) y nunca se imprimen.
@@ -100,13 +101,19 @@ apps() {
 }
 
 diario() {
-  paso "tarea diaria: 08:00 UTC = 2:00 en el Centro de México"
+  paso "tarea programada: lunes 08:00 UTC = 2:00 en el Centro de México"
   # El monitoreo revisa la API y el dashboard por sus dominios públicos.
-  variables $OPER SERVICIO=diario 'DATACORE_API_URL=https://${{datacore-api.RAILWAY_PUBLIC_DOMAIN}}'     'DATACORE_DASHBOARD_URL=https://${{datacore-dashboard.RAILWAY_PUBLIC_DOMAIN}}'
-  instancia $OPER 'cronSchedule: "0 8 * * *", restartPolicyType: NEVER'
+  # Con corridas semanales, el monitoreo tolera hasta 8 días sin ETL ni respaldo.
+  variables $OPER SERVICIO=diario DATACORE_ETL_MAX_HORAS=192 DATACORE_RESPALDO_MAX_HORAS=192 'DATACORE_API_URL=https://${{datacore-api.RAILWAY_PUBLIC_DOMAIN}}'     'DATACORE_DASHBOARD_URL=https://${{datacore-dashboard.RAILWAY_PUBLIC_DOMAIN}}'
+  instancia $OPER 'cronSchedule: "0 8 * * 1", restartPolicyType: NEVER'
   # Con el horario activo, la subida no ejecuta la tarea en ese momento. (No usar `railway service redeploy`:
   # reconstruye sin el Dockerfile.)
   subir $OPER
+}
+
+ahorro() {
+  paso "apagado automático sin tráfico (dashboard, API y PostgreSQL)"
+  for s in $DASH $API Postgres; do instancia "$s" 'sleepApplication: true'; done
 }
 
 estado() {
@@ -115,6 +122,6 @@ estado() {
 }
 
 case "${1:-}" in
-  servicios|inicial|apps|diario|estado) "$1" ;;
+  servicios|inicial|apps|diario|ahorro|estado) "$1" ;;
   *) sed -n '2,13p' "$0"; exit 2 ;;
 esac

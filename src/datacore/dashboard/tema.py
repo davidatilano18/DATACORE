@@ -186,6 +186,19 @@ CSS = f"""
   .dc-kpi .d {{ font-size: .8rem; font-weight: 600; margin-top: .1rem; }}
   .dc-kpi .n {{ color: {TINTA_TENUE}; font-size: .78rem; margin-top: .1rem; }}
   .dc-kpi svg.spark {{ display: block; width: 100%; height: 30px; margin-top: .4rem; }}
+  /* Celular: toda franja en 2 columnas parejas; los separadores van entre columnas y entre renglones. */
+  @media (max-width: 640px) {{
+    .dc-franja {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+    .dc-kpi, .dc-kpi:first-child {{ border-left: 0; border-top: 1px solid {REJILLA}; padding: 12px 12px 10px; }}
+    .dc-kpi:nth-child(-n+2) {{ border-top: 0; }}
+    .dc-kpi:nth-child(even) {{ border-left: 1px solid {REJILLA}; }}
+    .dc-franja.ligera .dc-kpi {{ padding: 10px 12px 4px; }}
+    .dc-franja.ligera .dc-kpi:nth-child(odd) {{ padding-left: 0; }}
+    .dc-kpi .v {{ font-size: 1.6rem; }}
+    .dc-franja.ligera .dc-kpi .v {{ font-size: 1.4rem; }}
+    div[data-baseweb="tab-list"] {{ gap: .9rem; }}
+    button[data-baseweb="tab"] p {{ font-size: .82rem; }}
+  }}
   /* Barra de salud: proporción de pares por estado, con leyenda de ícono, texto y conteo. */
   .dc-salud {{ display: flex; height: 22px; border-radius: 4px; overflow: hidden; margin: .5rem 0 .6rem; }}
   .dc-salud div {{ min-width: 3px; }}
@@ -421,8 +434,10 @@ def mapa_red(puntos: list[dict], estados_con_sucursal: set[str], alto: int = 500
               for p in puntos],
         textposition=[p.get("posicion", "top center") for p in puntos],
         textfont=dict(family=FUENTE_CIFRAS, size=13, color=TINTA),
+        # En pantallas angostas las etiquetas de las orillas salen del área de la gráfica: se dibujan fuera de ella.
+        cliponaxis=False,
         hovertext=[p["hover"] for p in puntos], hovertemplate="%{hovertext}<extra></extra>")
-    fig.update_layout(hovermode="closest", margin=dict(l=0, r=0, t=0, b=0), plot_bgcolor=SUPERFICIE,
+    fig.update_layout(hovermode="closest", margin=dict(l=28, r=28, t=0, b=0), plot_bgcolor=SUPERFICIE,
                       xaxis=dict(visible=False, range=[-104.6, -97.0]),
                       yaxis=dict(visible=False, range=[18.4, 26.3], scaleanchor="x", scaleratio=1.08))
     grafica(fig, alto=alto, clave=clave)

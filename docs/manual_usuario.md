@@ -6,7 +6,7 @@ Se usa desde el navegador, en el **dashboard**.
 ## Antes de empezar
 
 - El dashboard está en https://datacore-dashboard-production.up.railway.app (en local: `http://localhost:8501`).
-- Los datos se actualizan una vez al día, de madrugada. Cada página muestra arriba a la derecha el sello **Corte de datos** con la fecha de la información; el detalle de la última carga está en *Inicio → Estado de la plataforma*.
+- Los datos se actualizan cada lunes, de madrugada. Cada página muestra arriba a la derecha el sello **Corte de datos** con la fecha de la información; el detalle de la última carga está en *Inicio → Estado de la plataforma*.
 - Los montos están en pesos mexicanos (MXN).
 - Las tablas se pueden ordenar haciendo clic en el encabezado y descargar como CSV desde el menú de la propia tabla.
 
