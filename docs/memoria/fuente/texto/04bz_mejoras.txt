@@ -57,7 +57,7 @@ La Tabla 4.18 resume los servicios en producción. Los tres servicios de la apli
 | Servicio | Función | Acceso |
 | datacore-dashboard | Dashboard de Streamlit con las seis páginas. | Público: https://datacore-dashboard-production.up.railway.app |
 | datacore-api | API REST; todas las rutas, salvo /salud, piden la clave de acceso. | Público con clave |
-| datacore-diario | Proceso diario: respaldo y su verificación, datos, ETL, modelo, anomalías y monitoreo. | Tarea programada cada lunes a las 2:00 (Centro de México) |
+| datacore-diario | Proceso de operación: respaldo y su verificación, datos, ETL, modelo, anomalías y monitoreo. | Tarea programada cada lunes a las 2:00 (Centro de México) |
 | Postgres | PostgreSQL 18 administrado, con volumen persistente. | Red privada |
 [NOTA] Elaboración propia con base en docs/06_operacion_y_despliegue.md.
 

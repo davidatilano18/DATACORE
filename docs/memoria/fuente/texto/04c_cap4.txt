@@ -13,7 +13,7 @@ Todos los componentes de la plataforma se evaluaron contra la verdad de referenc
 | Detección de anomalías | F1 de 0.335; detecta 49.6 % de las fallas de 6 a 8 horas. | reports/ml/anomalias.md |
 | Respaldos | 16 MB en 3 s; la restauración de 1,525,992 filas cuadró al 100 % en 12 s. | ops.respaldos |
 | Pruebas | 116 pruebas automatizadas aprobadas. | GitHub Actions |
-| Despliegue | Dashboard público, API, PostgreSQL y proceso diario en Railway; mismas cifras que en local. | docs/06_operacion_y_despliegue.md |
+| Despliegue | Dashboard público, API, PostgreSQL y proceso programado en Railway; mismas cifras que en local. | docs/06_operacion_y_despliegue.md |
 [NOTA] Elaboración propia.
 
 ### 4.2.2 Calidad de los datos
