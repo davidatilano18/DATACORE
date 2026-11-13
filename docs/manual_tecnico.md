@@ -71,6 +71,21 @@ src/datacore/
 db/  schema.sql (core, ops) · operacion.sql (respaldos, monitoreo, corridas) · vistas.sql (kpi)
 ```
 
+### Módulos agregados en las mejoras
+
+| módulo | qué hace |
+|---|---|
+| `ml/impacto.py` | Simula un año día a día con la política actual (órdenes reales) y con reposición guiada por DATACORE; calibra el cuantil en el año anterior. Reporte: `reports/ml/impacto.md`. |
+| `ml/alertas_segmentadas.py` | Evalúa fuera de muestra reglas de alerta (p90, media, umbral único, por segmento, con corrección de censura). Regla elegida: `reports/ml/regla_alertas.json`. |
+| `ml/explicaciones.py` | Arma los 2 o 3 factores ("¿por qué?") de cada alerta con reglas sobre sus cantidades. |
+| `ml/publicacion.py` (`recomendacion`) | Nivel objetivo, cantidad sugerida y fecha límite de cada alerta de desabasto. |
+| `operacion/datos.py` | Genera los datos simulados si `data/raw` está vacío (servidores nuevos). |
+| `dashboard/static/fuentes`, `dashboard/datos` | Fuentes IBM Plex (OFL) y contornos de los estados para el mapa; se sirven con `enableStaticServing`. |
+
+Los pronósticos fuera de muestra de 7 bloques se guardan en `data/impacto/` (no se versiona). Las columnas
+`nivel_objetivo`, `cantidad_sugerida`, `fecha_limite` y `motivos` de `ops.alertas_inventario` llegan a una base
+existente con `python -m datacore.db_setup` (migraciones al final de `db/operacion.sql`).
+
 ## 5. Tareas frecuentes
 
 | Necesito… | Comando |
@@ -80,6 +95,9 @@ db/  schema.sql (core, ops) · operacion.sql (respaldos, monitoreo, corridas) ·
 | Refrescar las vistas materializadas | `python -m datacore.db_setup --refrescar` |
 | Correr el ETL sin tocar la base | `python -m datacore.etl --sin-carga --evaluar` |
 | Evaluar el modelo contra baselines | `python -m datacore.ml evaluar` |
+| Medir el impacto en dinero contra la política actual | `python -m datacore.ml impacto [--tasa-mantener 0.25] [--recalcular]` (≈1 min con la caché; ≈4 min con `--recalcular`) |
+| Comparar reglas de alerta fuera de muestra | `python -m datacore.ml alertas` (usa la misma caché de pronósticos) |
+| Carga inicial de un servidor nuevo | `python -m datacore.operacion inicial` (base, datos simulados, ETL, modelo y anomalías) |
 | Respaldar y verificar | `python -m datacore.operacion respaldo --verificar` |
 | Restaurar un respaldo en la base viva | `pg_restore -h localhost -U datacore_app -d datacore --clean --if-exists backups\<archivo>.dump` |
 | Revisar el estado | `python -m datacore.operacion monitoreo` |

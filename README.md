@@ -62,11 +62,15 @@ Guía completa: [manual técnico](docs/manual_tecnico.md).
 | 7–8 | Análisis exploratorio: [reports/eda](reports/eda/README.md) | Primera versión |
 | 7–8 | Indicadores: esquema `kpi` con 9 vistas ([db/vistas.sql](db/vistas.sql)) | Listo |
 | 9–10 | Pronóstico de demanda semanal y alertas: [docs/05](docs/05_modelo_demanda.md), [reports/ml](reports/ml/backtest.md) | Listo |
-| 11–12 | API REST (FastAPI, `/docs`) y dashboard (Streamlit, 6 páginas) | Listo |
+| 11–12 | API REST (FastAPI, `/docs`) y dashboard (Streamlit, 6 páginas, rediseño con mapa de la red) | Listo |
 | 13–14 | Respaldos verificados, monitoreo, proceso diario, CI y Docker: [docs/06](docs/06_operacion_y_despliegue.md) | Listo |
-| 13–14 | Despliegue en servidor (Railway o VPS) | Pendiente: decisión del equipo |
+| Mejoras 1 | Impacto en dinero: simulación de 2025 contra la política actual, [reports/ml/impacto.md](reports/ml/impacto.md) (−14 % ventas perdidas, −12 % inventario, ≈ $346 mil al año) | Listo |
+| Mejoras 2 | Alerta de desabasto con corrección de censura, elegida fuera de muestra (F1 0.239 → 0.281): [backtest.md](reports/ml/backtest.md) | Listo |
+| Mejoras 3 | Pedido sugerido y fecha límite en cada alerta de desabasto (API y dashboard) | Listo |
+| Mejoras 4 | "¿Por qué?" de cada alerta: 2 o 3 factores en lenguaje sencillo | Listo |
+| Mejoras 5 | Despliegue en Azure for Students: imagen preparada y plan en [docs/06](docs/06_operacion_y_despliegue.md) | Elegido, no ejecutado |
 | 15–16 | [Manual técnico](docs/manual_tecnico.md) y [manual de usuario](docs/manual_usuario.md) | Primera versión |
-| 15–16 | Memoria de estadía | Pendiente |
+| 15–16 | Memoria de estadía | En redacción |
 
 ## Datos generados
 
@@ -92,8 +96,9 @@ en el entorno del proceso. Las lecturas se conservan en caché durante cinco min
 
 - **Inicio:** indicadores ejecutivos, salud del inventario, mapa de la red de 12 sucursales con sus alertas, ventas mensuales y estado de la plataforma.
 - **Ventas:** fechas y sucursal, serie diaria, media móvil, categorías y clasificación ABC histórica.
-- **Inventario:** estados, cobertura por sucursal y tasa mensual de desabasto.
-- **Alertas:** pendientes por tipo y sucursal, con acción para marcarlas como atendidas.
+- **Inventario:** barra de salud con los pares por estado, distribución por sucursal, tasa mensual de desabasto y cobertura.
+- **Alertas:** pendientes por tipo y sucursal; las de desabasto traen cantidad a pedir y fecha límite, y cada alerta
+  su motivo principal (al seleccionar filas se ve la explicación completa). Acción para marcarlas como atendidas.
 - **Pronóstico:** búsqueda por nombre/SKU, historia de 52 semanas, cuatro semanas previstas e indicadores del modelo.
 - **Calidad y operación:** hallazgos por regla y acción, ejecuciones del ETL e incidencias mensuales.
 

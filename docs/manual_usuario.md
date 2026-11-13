@@ -27,6 +27,8 @@ Se usa desde el navegador, en el **dashboard**.
 5. **Clasificación ABC:** los productos A generan el 80 % del ingreso; los B, el siguiente 15 %; los C, el resto.
 
 ### Inventario
+Arriba, una barra reparte todos los pares sucursal-producto por estado, con su cantidad y porcentaje; debajo, las mismas cifras una por una.
+
 - **Pares por estado:**
   - *sin existencia*: no hay piezas;
   - *bajo mínimo*: hay menos que el punto de reorden;
@@ -45,7 +47,14 @@ Las genera el modelo de pronóstico cada día:
 | **EXCESO_INVENTARIO** | Al ritmo pronosticado, la existencia dura más de 180 días. | Frenar las compras, considerar promociones o traspasos a otras sucursales. |
 | **SIN_ROTACION** | Hay piezas, no se vende nada desde hace 13 semanas y no se espera demanda. | Evaluar liquidar o descontinuar. |
 
-Para registrar que una alerta ya se atendió, selecciónala en la lista y pulsa **Marcar como atendida**. Desaparece de los pendientes.
+Cada alerta de **riesgo de desabasto** trae dos columnas para actuar:
+
+- **Pedir (u):** las unidades para llegar al nivel recomendado (la demanda esperada mientras llega el pedido, más un colchón para la variación). No descuenta pedidos que ya estén en camino: réstalos tú.
+- **Pedir a más tardar:** el último día para pedir y recibir antes de que se agote, al ritmo de venta esperado. La lista muestra primero las más urgentes y, arriba de la tabla, el total de unidades sugeridas.
+
+La columna **Motivo principal** dice por qué salió la alerta (por ejemplo, "Ya no hay existencia y un pedido tarda 6 días en llegar"). Si **seleccionas una o varias filas**, debajo de la tabla aparece la explicación completa de cada una, con 2 o 3 factores (temporada, tendencia, días que estuvo agotado…) y el pedido sugerido.
+
+Para registrar que una alerta ya se atendió, selecciónala en la lista y pulsa **Marcar como atendidas**. Desaparece de los pendientes.
 
 > En las pruebas, una de cada cuatro alertas de desabasto terminó en un faltante real, y las alertas anticiparon cerca de un tercio de los faltantes. Úsala como lista de revisión priorizada, no como orden de compra automática. Si el producto estuvo agotado en las últimas semanas, la alerta lo toma en cuenta: en ese tiempo se vendió menos de lo que los clientes pidieron.
 
