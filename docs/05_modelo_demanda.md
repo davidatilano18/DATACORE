@@ -124,3 +124,13 @@ Exhaustividad por duración de la falla (umbral publicado): 2-3 h, 12.7 %; 4-5 h
 - La validación con origen móvil cubre un año (2025). Con más historia podrían usarse más bloques.
 - Los productos descontinuados no tienen fecha de baja en `core`. Se excluyen de la publicación con el campo `activo`, pero sí aparecen en el entrenamiento con ceros.
 - Las sucursales y los productos nuevos tienen poca historia; el modelo se apoya en categoría, región y media del producto.
+
+## Impacto en dinero (simulación de políticas de resurtido)
+
+`python -m datacore.ml impacto` simula 2025 día a día sobre la demanda real de cada par (ventas + demanda no surtida
+de `data/ground_truth`) con la política actual (las órdenes de compra reales) y con una política que repone según los
+pronósticos de DATACORE (revisión semanal, cuantil binomial negativa de la demanda durante entrega + retraso esperado +
+revisión, con corrección de censura). El cuantil se calibra en abril–diciembre de 2024 y se aplica fijo a 2025.
+Código: `src/datacore/ml/impacto.py`; resultado: [`reports/ml/impacto.md`](../reports/ml/impacto.md). Los supuestos de
+dinero (costo de mantener inventario, precios y costos) son configurables y están listados en el reporte. Los
+pronósticos fuera de muestra se guardan en `data/impacto/` (no se versiona); `--recalcular` los vuelve a generar.

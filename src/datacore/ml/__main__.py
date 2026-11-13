@@ -1,8 +1,10 @@
 """Uso:
   python -m datacore.ml evaluar  [--horizontes 1 2 4] [--ground-truth data/ground_truth] [--reporte reports/ml]
   python -m datacore.ml publicar [--horizontes 1 2 3 4]
+  python -m datacore.ml impacto  [--anio 2025] [--cuantil 0.9] [--tasa-mantener 0.25] [--recalcular]
 
 evaluar:  backtest fuera de muestra contra baselines (y contra la demanda real si hay ground truth).
+impacto:  simulación del año con la política actual y con DATACORE; reporte en reports/ml/impacto.md.
 publicar: backtest rápido para métricas e intervalos, entrenamiento con todo el historial,
           pronóstico de las próximas semanas y alertas de inventario en ops.
 """
@@ -20,17 +22,34 @@ from .datos import cargar, demanda_real
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Pronóstico de demanda de DATACORE.")
-    parser.add_argument("accion", choices=["evaluar", "publicar", "anomalias"])
+    parser.add_argument("accion", choices=["evaluar", "publicar", "anomalias", "impacto"])
     parser.add_argument("--horizontes", type=int, nargs="+")
     parser.add_argument("--ground-truth", type=Path, default=Path("data/ground_truth"))
     parser.add_argument("--reporte", type=Path, default=Path("reports/ml"))
     parser.add_argument("--origenes", type=int, default=4,
                         help="bloques de 13 semanas para la validación con origen móvil (evaluar)")
+    parser.add_argument("--anio", type=int, default=2025, help="año simulado (impacto)")
+    parser.add_argument("--cuantil", type=float, default=None,
+                        help="cuantil objetivo de DATACORE; por omisión se calibra en el año anterior (impacto)")
+    parser.add_argument("--tasa-mantener", type=float, default=0.25,
+                        help="costo anual de mantener inventario, fracción del costo (impacto)")
+    parser.add_argument("--recalcular", action="store_true", help="vuelve a correr el backtest (impacto)")
     args = parser.parse_args()
     t0 = time.perf_counter()
 
     def log(msg):
         print(f"[{time.perf_counter() - t0:6.1f}s] {msg}", flush=True)
+
+    if args.accion == "impacto":
+        from . import impacto
+        sup = impacto.Supuestos(anio=args.anio, cuantil_objetivo=args.cuantil, tasa_mantener_anual=args.tasa_mantener)
+        r = impacto.ejecutar(args.ground_truth, Path("data/impacto/predicciones_backtest.parquet"), args.reporte,
+                             sup, recalcular=args.recalcular, log=log)
+        print(r["tabla"].to_string(float_format=lambda x: f"{x:,.3f}"))
+        log(f"cuantil calibrado en {args.anio - 1}: {r['cuantil']}; "
+            f"beneficio neto: {r['impacto']['beneficio_neto_pesos']:,.0f}")
+        log(f"reporte → {args.reporte / 'impacto.md'}")
+        return
 
     if args.accion == "anomalias":
         from . import anomalias
