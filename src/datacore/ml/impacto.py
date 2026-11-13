@@ -43,6 +43,8 @@ class Supuestos:
     cuantiles: tuple = (0.90, 0.95, 0.97, 0.98, 0.99, 0.995)  # rejilla para calibrar y para la frontera
     corregir_censura: bool = True       # divide el pronóstico entre (1 − fracción de días agotado en 4 semanas)
     tope_censura: float = 2.0           # factor máximo de esa corrección
+    disparo: str = "nivel"              # "nivel": pide siempre que la posición quede bajo el nivel objetivo;
+                                        # "alerta": pide solo cuando se cumple la alerta de desabasto publicada
     dias_revision: int = 7              # DATACORE revisa una vez por semana
     dias_fin_resurtido: int = 30        # se deja de pedir este número de días antes de la baja del producto
     semilla: int = 42                   # sorteo de retrasos de proveedor en la política DATACORE
@@ -230,6 +232,7 @@ def politica_datacore(datos: Datos, pron: dict[int, pd.DataFrame], sup: Supuesto
     proteccion = 1 + datos.entrega + datos.prob_retraso * datos.retraso_medio + sup.dias_revision
     n = len(datos.pares)
     agotado = np.zeros((n, 28))  # días con existencia 0 en las últimas 4 semanas (ventana circular)
+    horizonte_alerta = datos.entrega + 7  # la alerta publicada mira la demanda en entrega + 7 días
 
     def politica(d, existencia, en_camino, vendido):
         agotado[:, d % 28] = existencia <= 0
@@ -241,12 +244,18 @@ def politica_datacore(datos: Datos, pron: dict[int, pd.DataFrame], sup: Supuesto
             # Sin pronóstico (p. ej., la última semana del año): ventas observadas de los últimos 28 días.
             base = vendido[sin_pron, max(0, d - 27):d + 1].sum(axis=1) / 28 * proteccion[sin_pron]
             mu[sin_pron], var[sin_pron] = base, base * 2
-        if sup.corregir_censura:
-            factor = np.clip(1 / (1 - np.minimum(agotado.mean(axis=1), 0.5)), 1, sup.tope_censura)
-            mu, var = mu * factor, var * factor ** 2
+        factor = np.clip(1 / (1 - np.minimum(agotado.mean(axis=1), 0.5)), 1, sup.tope_censura) \
+            if sup.corregir_censura else np.ones(n)
+        mu, var = mu * factor, var * factor ** 2
         nivel = cuantil_binomial_negativa(mu, var, q_obj)
         posicion = existencia + en_camino
-        q = np.where(datos.puede_pedir[:, d] & (posicion < nivel), np.ceil(nivel - posicion), 0.0)
+        if sup.disparo == "alerta":
+            # Regla publicada (python -m datacore.ml alertas): demanda esperada en entrega + 7 días, corregida.
+            umbral = mu * np.clip(horizonte_alerta / np.maximum(proteccion, 1e-9), 0, 1)
+            dispara = posicion < umbral
+        else:
+            dispara = posicion < nivel
+        q = np.where(datos.puede_pedir[:, d] & dispara, np.ceil(np.maximum(nivel - posicion, 0)), 0.0)
         retraso = np.where(rng.random(n) < datos.prob_retraso, rng.integers(2, 9, n), 0)
         return q, d + 1 + datos.entrega.astype(int) + retraso
 
@@ -334,32 +343,44 @@ def calibrar(tabla: pd.DataFrame) -> float:
     return float(min(candidatos)) if candidatos else float(max(q for q in tabla.index if q != "actual"))
 
 
-def ejecutar(ruta_gt: Path, cache: Path, reporte: Path, sup: Supuestos, recalcular: bool = False,
-             log=print) -> dict:
-    pred, disp = obtener_predicciones(cache, recalcular, log)
-    sup.dispersion = {**sup.dispersion, **disp}
-    resultados = {}
-    # Calibración: del primer bloque del backtest al cierre del año anterior; evaluación: el año completo.
+def _evaluar_disparo(ruta_gt: Path, pred: pd.DataFrame, sup: Supuestos, log=print) -> dict:
+    """Calibra el cuantil en el año anterior (desde el primer bloque del backtest) y evalúa el año."""
     primera = pd.Timestamp(pred["semana"].min())
     periodos = {sup.anio - 1: (max(primera, pd.Timestamp(sup.anio - 1, 1, 1)), pd.Timestamp(sup.anio - 1, 12, 31)),
                 sup.anio: (pd.Timestamp(sup.anio, 1, 1), pd.Timestamp(sup.anio, 12, 31))}
+    resultados = {}
     for anio, (ini, fin) in periodos.items():
         s_anio = Supuestos(**{**sup.__dict__, "anio": anio})
         datos = cargar(ruta_gt, s_anio, ini, fin)
-        log(f"{ini:%Y-%m-%d} a {fin:%Y-%m-%d}: {len(datos.pares):,} pares × {len(datos.dias)} días")
+        log(f"disparo «{sup.disparo}», {ini:%Y-%m-%d} a {fin:%Y-%m-%d}: {len(datos.pares):,} pares")
         resultados[anio] = (frontera(datos, pronosticos_semanales(pred, datos.pares), s_anio, log), datos)
     calibrado = sup.cuantil_objetivo or calibrar(resultados[sup.anio - 1][0])
     tabla, datos = resultados[sup.anio]
     if calibrado not in tabla.index:
         tabla.loc[calibrado] = metricas(simular_datacore(datos, pronosticos_semanales(pred, datos.pares), sup,
                                                          calibrado), datos, sup)
+    return {"tabla": tabla, "calibracion": resultados[sup.anio - 1][0], "cuantil": calibrado, "datos": datos,
+            "periodo_calibracion": periodos[sup.anio - 1]}
+
+
+def ejecutar(ruta_gt: Path, cache: Path, reporte: Path, sup: Supuestos, recalcular: bool = False,
+             log=print) -> dict:
+    pred, disp = obtener_predicciones(cache, recalcular, log)
+    sup.dispersion = {**sup.dispersion, **disp}
+    principal = _evaluar_disparo(ruta_gt, pred, sup, log)
+    otro = "alerta" if sup.disparo == "nivel" else "nivel"
+    alterno = _evaluar_disparo(ruta_gt, pred, Supuestos(**{**sup.__dict__, "disparo": otro}), log)
+    tabla, datos, calibrado = principal["tabla"], principal["datos"], principal["cuantil"]
+    comparacion = pd.DataFrame({
+        sup.disparo: tabla.loc[calibrado], otro: alterno["tabla"].loc[alterno["cuantil"]]}).T
+    comparacion["cuantil"] = [calibrado, alterno["cuantil"]]
     perdido_real = float(((datos.demanda - datos.vendido_real) * datos.vivo).sum())
     reporte.mkdir(parents=True, exist_ok=True)
-    texto = reporte_markdown(tabla, resultados[sup.anio - 1][0], calibrado, sup, perdido_real,
-                             periodo_calibracion=periodos[sup.anio - 1])
+    texto = reporte_markdown(tabla, principal["calibracion"], calibrado, sup, perdido_real,
+                             periodo_calibracion=principal["periodo_calibracion"], comparacion=comparacion)
     (reporte / "impacto.md").write_text(texto, encoding="utf-8")
     tabla.to_csv(reporte / "impacto_metricas.csv")
-    return {"tabla": tabla, "calibracion": resultados[sup.anio - 1][0], "cuantil": calibrado,
+    return {"tabla": tabla, "calibracion": principal["calibracion"], "cuantil": calibrado, "comparacion": comparacion,
             "impacto": impacto(tabla.loc["actual"].to_dict(), tabla.loc[calibrado].to_dict())}
 
 
@@ -379,8 +400,34 @@ def _tabla_md(tabla: pd.DataFrame, marcar=None) -> str:
     return "\n".join(filas)
 
 
+def _comparacion_md(comparacion: pd.DataFrame | None, actual: pd.Series) -> str:
+    if comparacion is None:
+        return ""
+    nombres = {"nivel": "Pedir siempre que la posición quede bajo el nivel objetivo (reposición)",
+               "alerta": "Pedir solo cuando salta la alerta de desabasto publicada"}
+    filas = ["| regla de disparo | cuantil calibrado | ventas perdidas (u) | inventario promedio | nivel de servicio | "
+             "beneficio neto anual |", "|---|---|---|---|---|---|"]
+    for disparo, r in comparacion.iterrows():
+        neto = impacto(actual.to_dict(), r.to_dict())["beneficio_neto_pesos"]
+        filas.append(f"| {nombres.get(disparo, disparo)} | p{float(r.cuantil) * 100:g} | {r.ventas_perdidas_unidades:,.0f} | "
+                     f"{_pesos(r.inventario_promedio_pesos)} | {r.nivel_servicio:.2%} | {_pesos(neto)} |")
+    return """
+## ¿Y si se repone solo cuando salta la alerta?
+
+La alerta de desabasto se eligió para **avisar** con el mejor equilibrio entre aciertos y falsas alarmas (F1; ver
+`backtest.md`), así que su umbral es la demanda *media* durante la entrega + 7 días, sin colchón. Usada como punto de
+reorden, el pedido sale cuando ya solo queda la demanda promedio y llega sin margen. Cada regla, con su cuantil
+calibrado en el año anterior:
+
+""" + "\n".join(filas) + """
+
+Conclusión: la alerta sirve para **priorizar la revisión** de los pares en riesgo; la **cantidad y el momento del
+pedido** deben salir del nivel objetivo (cuantil de la demanda), que es lo que se reporta arriba.
+"""
+
+
 def reporte_markdown(tabla: pd.DataFrame, calibracion: pd.DataFrame, q: float, sup: Supuestos,
-                     perdido_real: float, periodo_calibracion=None) -> str:
+                     perdido_real: float, periodo_calibracion=None, comparacion: pd.DataFrame | None = None) -> str:
     actual, dc = tabla.loc["actual"], tabla.loc[q]
     imp = impacto(actual.to_dict(), dc.to_dict())
     menos_perdidas = 1 - dc.ventas_perdidas_unidades / actual.ventas_perdidas_unidades
@@ -433,7 +480,7 @@ ronda 77 %): un p99 nominal se comporta como un nivel de cobertura menor.
 {_tabla_md(tabla, marcar=q)}
 
 Cuantiles más altos compran servicio con inventario; más bajos, al revés.
-
+{_comparacion_md(comparacion, actual)}
 ## Cómo se simuló
 
 - **Política actual:** se reproducen las órdenes de compra reales de NexaTech en {sup.anio}, con sus fechas de llegada

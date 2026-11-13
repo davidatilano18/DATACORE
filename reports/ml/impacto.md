@@ -57,6 +57,21 @@ ronda 77 %): un p99 nominal se comporta como un nivel de cobertura menor.
 
 Cuantiles más altos compran servicio con inventario; más bajos, al revés.
 
+## ¿Y si se repone solo cuando salta la alerta?
+
+La alerta de desabasto se eligió para **avisar** con el mejor equilibrio entre aciertos y falsas alarmas (F1; ver
+`backtest.md`), así que su umbral es la demanda *media* durante la entrega + 7 días, sin colchón. Usada como punto de
+reorden, el pedido sale cuando ya solo queda la demanda promedio y llega sin margen. Cada regla, con su cuantil
+calibrado en el año anterior:
+
+| regla de disparo | cuantil calibrado | ventas perdidas (u) | inventario promedio | nivel de servicio | beneficio neto anual |
+|---|---|---|---|---|---|
+| Pedir siempre que la posición quede bajo el nivel objetivo (reposición) | p99 | 39,745 | $ 9.00 M | 96.02% | $ 346,250 |
+| Pedir solo cuando salta la alerta de desabasto publicada | p99.5 | 105,855 | $ 7.65 M | 89.40% | $ -1.77 M |
+
+Conclusión: la alerta sirve para **priorizar la revisión** de los pares en riesgo; la **cantidad y el momento del
+pedido** deben salir del nivel objetivo (cuantil de la demanda), que es lo que se reporta arriba.
+
 ## Cómo se simuló
 
 - **Política actual:** se reproducen las órdenes de compra reales de NexaTech en 2025, con sus fechas de llegada

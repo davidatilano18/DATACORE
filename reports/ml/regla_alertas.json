@@ -1,0 +1,6 @@
+{
+  "_global": "media",
+  "_censura": true,
+  "_tope_censura": 2.0,
+  "_regla": "modelo, media + censura"
+}

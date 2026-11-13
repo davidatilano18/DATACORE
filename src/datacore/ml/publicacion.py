@@ -13,11 +13,15 @@ from scipy import stats
 from sqlalchemy import Engine, text
 
 from . import caracteristicas as car
+from .alertas_segmentadas import TOPE_CENSURA, factor_censura
 from .datos import Series
 from .modelos import entrenar
 
-Z_90 = stats.norm.ppf(0.9)
 DIAS_EXCESO = 180
+# Regla de RIESGO_DESABASTO elegida fuera de muestra (python -m datacore.ml alertas, reports/ml/backtest.md):
+# existencia < demanda esperada durante entrega + 7 días, corregida por censura. Mejor F1 que el p90 anterior
+# en los 4 bloques de 2025 (0.281 contra 0.239) y elegida con los bloques de 2024.
+Z_ALERTA = 0.0
 
 
 def pronosticar(series: Series, horizontes=(1, 2, 3, 4), dispersion: dict[int, float] | None = None,
@@ -69,20 +73,24 @@ def alertas(series: Series, pron: pd.DataFrame) -> pd.DataFrame:
         mu_w = df[h].fillna(0).to_numpy() * fraccion
         mu_h += mu_w
         var_h += mu_w + mu_w ** 2 / kk
-    df["demanda_horizonte_p90"] = mu_h + Z_90 * np.sqrt(var_h)
+    # Corrección de censura: los pares que pasaron días agotados venden menos de lo que se les pide.
+    agotado_4 = series.agotado.iloc[-4:].mean()
+    df["factor_censura"] = factor_censura(
+        agotado_4.reindex(pd.MultiIndex.from_frame(df[["id_sucursal", "id_producto"]])).to_numpy(), TOPE_CENSURA)
+    df["demanda_reposicion"] = (mu_h + Z_ALERTA * np.sqrt(var_h)) * df["factor_censura"].to_numpy()
     df["cobertura_dias"] = df["existencia"] / np.where(df["media_semanal"] > 0, df["media_semanal"] / 7, np.nan)
 
     ultimas_13 = series.unidades.iloc[-13:].sum()
     df["unidades_13_semanas"] = ultimas_13.reindex(pd.MultiIndex.from_frame(df[["id_sucursal", "id_producto"]])).to_numpy()
 
     sin_rotacion = (df["existencia"] > 0) & (df["unidades_13_semanas"] == 0) & (df["media_semanal"] < 0.25)
-    riesgo = ~sin_rotacion & (df["existencia"] < df["demanda_horizonte_p90"])
+    riesgo = ~sin_rotacion & (df["existencia"] < df["demanda_reposicion"])
     exceso = ~sin_rotacion & ~riesgo & (df["cobertura_dias"] > DIAS_EXCESO)
     df["tipo"] = np.select([riesgo, exceso, sin_rotacion], ["RIESGO_DESABASTO", "EXCESO_INVENTARIO", "SIN_ROTACION"], "")
     out = df[df["tipo"] != ""]
     return pd.DataFrame({
         "id_sucursal": out["id_sucursal"], "id_producto": out["id_producto"], "tipo": out["tipo"],
-        "existencia": out["existencia"], "demanda_estimada": out["demanda_horizonte_p90"].round(2),
+        "existencia": out["existencia"], "demanda_estimada": out["demanda_reposicion"].round(2),
         "dias_cobertura": out["cobertura_dias"].round(1).clip(upper=9999),
     }).reset_index(drop=True)
 

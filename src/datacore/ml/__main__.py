@@ -2,8 +2,11 @@
   python -m datacore.ml evaluar  [--horizontes 1 2 4] [--ground-truth data/ground_truth] [--reporte reports/ml]
   python -m datacore.ml publicar [--horizontes 1 2 3 4]
   python -m datacore.ml impacto  [--anio 2025] [--cuantil 0.9] [--tasa-mantener 0.25] [--recalcular]
+  python -m datacore.ml alertas
 
 evaluar:  backtest fuera de muestra contra baselines (y contra la demanda real si hay ground truth).
+alertas:  mejora de la alerta de desabasto (umbral por segmento y corrección de censura), elegida fuera
+          de muestra; sección en reports/ml/backtest.md y regla en reports/ml/regla_alertas.json.
 impacto:  simulación del año con la política actual y con DATACORE; reporte en reports/ml/impacto.md.
 publicar: backtest rápido para métricas e intervalos, entrenamiento con todo el historial,
           pronóstico de las próximas semanas y alertas de inventario en ops.
@@ -22,7 +25,7 @@ from .datos import cargar, demanda_real
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Pronóstico de demanda de DATACORE.")
-    parser.add_argument("accion", choices=["evaluar", "publicar", "anomalias", "impacto"])
+    parser.add_argument("accion", choices=["evaluar", "publicar", "anomalias", "impacto", "alertas"])
     parser.add_argument("--horizontes", type=int, nargs="+")
     parser.add_argument("--ground-truth", type=Path, default=Path("data/ground_truth"))
     parser.add_argument("--reporte", type=Path, default=Path("reports/ml"))
@@ -51,6 +54,15 @@ def main() -> None:
         log(f"reporte → {args.reporte / 'impacto.md'}")
         return
 
+    if args.accion == "alertas":
+        from . import alertas_segmentadas, impacto
+        pred, dispersion = impacto.obtener_predicciones(Path("data/impacto/predicciones_backtest.parquet"),
+                                                        args.recalcular, log)
+        r = alertas_segmentadas.ejecutar(cargar(engine("app")), pred, dispersion[1], args.reporte, log=log)
+        print(r["total"].to_string(index=False, float_format=lambda x: f"{x:.3f}"))
+        log(f"regla → {args.reporte / 'regla_alertas.json'}; sección agregada a {args.reporte / 'backtest.md'}")
+        return
+
     if args.accion == "anomalias":
         from . import anomalias
         anomalias.ejecutar(engine("app"), args.ground_truth, args.reporte)
@@ -72,7 +84,11 @@ def main() -> None:
             tabla, casos = evaluacion_alertas.evaluar(series, r["predicciones"], r["dispersion"][1])
             print(tabla.to_string(index=False, float_format=lambda x: f"{x:.3f}"))
             texto += "\n" + evaluacion_alertas.reporte_markdown(tabla, casos)
-        (args.reporte / "backtest.md").write_text(texto, encoding="utf-8")
+        anterior = args.reporte / "backtest.md"
+        marca = "<!-- inicio: alertas segmentadas -->"
+        if anterior.exists() and marca in (previo := anterior.read_text(encoding="utf-8")):
+            texto = texto.rstrip() + "\n\n" + previo[previo.index(marca):]  # conserva la sección de `alertas`
+        anterior.write_text(texto, encoding="utf-8")
         r["metricas"].to_csv(args.reporte / "backtest_metricas.csv", index=False)
         log(f"reporte → {args.reporte / 'backtest.md'}")
         return

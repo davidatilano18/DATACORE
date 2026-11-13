@@ -13,7 +13,7 @@ def mostrar():
     tema.franja([tema.kpi(nombre, tema.entero((marco.tipo == tipo).sum() if not marco.empty else 0), nivel=nivel, nota='pendientes de revisión') for tipo, (nombre, nivel) in TIPOS.items()])
     st.write('')
     with st.expander('Cómo interpretar las alertas'):
-        st.write('Riesgo de desabasto: existencia menor al percentil 90 de demanda durante el plazo de entrega más siete días. Exceso: cobertura pronosticada superior a 180 días. Sin rotación: existencia positiva, sin ventas en 13 semanas y pronóstico menor a 0.25 unidades semanales.')
+        st.write('Riesgo de desabasto: existencia menor a la demanda esperada durante el plazo de entrega más siete días, corregida si el producto estuvo agotado en las últimas cuatro semanas (en ese caso vendió menos de lo que se le pidió). Exceso: cobertura pronosticada superior a 180 días. Sin rotación: existencia positiva, sin ventas en 13 semanas y pronóstico menor a 0.25 unidades semanales.')
     caja = tema.bloque('Alertas pendientes', 'Filtra, revisa y selecciona las filas atendidas para marcarlas')
     a, b, c, d = caja.columns([1, 1, 1, 2])
     with a:
@@ -44,7 +44,7 @@ def mostrar():
         config[campo] = st.column_config.Column(campo.replace('_', ' ').capitalize(), width='medium' if campo in ['producto', 'tipo'] else 'small')
     config['dias_cobertura'] = st.column_config.NumberColumn('Cobertura (días)', format='%.1f', width='small')
     config['sku'] = st.column_config.TextColumn('SKU', width='small')
-    config['demanda_estimada'] = st.column_config.NumberColumn('Demanda', format='%.1f', width='small', help='Demanda esperada durante reposición (percentil 90)')
+    config['demanda_estimada'] = st.column_config.NumberColumn('Demanda', format='%.1f', width='small', help='Demanda esperada durante la reposición (entrega + 7 días), corregida por días agotado')
     seleccion = caja.dataframe(visibles[columnas], hide_index=True, column_config=config, on_select='rerun', selection_mode='multi-row', key=f"alertas_pendientes_{st.session_state.get('revision_alertas', 0)}", width='stretch')
     filas = seleccion.selection.rows
     if caja.button('Marcar como atendidas', disabled=not filas):

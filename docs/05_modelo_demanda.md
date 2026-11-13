@@ -71,11 +71,11 @@ Excluir las semanas censuradas **empeoró** el sesgo, contra lo que se esperaba.
 ## Intervalos y alertas
 
 - **Intervalo del 80 %:** binomial negativa con media igual al pronóstico y dispersión *k* estimada en el backtest (Var = μ + μ²/k).
-- **Demanda en reposición:** suma de los pronósticos semanales prorrateados a (días de entrega + 7) días, con su percentil 90.
+- **Demanda en reposición:** suma de los pronósticos semanales prorrateados a (días de entrega + 7) días, multiplicada por el factor de censura 1 / (1 − fracción de días agotado en las últimas 4 semanas), con tope ×2.
 
 | Alerta | Regla |
 |---|---|
-| `RIESGO_DESABASTO` | Existencia actual < percentil 90 de la demanda en el tiempo de reposición. |
+| `RIESGO_DESABASTO` | Existencia actual < demanda esperada en el tiempo de reposición, corregida por censura (desde la Fase 2 de mejoras; antes, percentil 90). |
 | `EXCESO_INVENTARIO` | Cobertura = existencia ÷ demanda diaria pronosticada > 180 días. |
 | `SIN_ROTACION` | Existencia > 0, cero ventas en 13 semanas y pronóstico < 0.25 unidades por semana. |
 
@@ -92,7 +92,7 @@ En cada semana del periodo de prueba se aplicó la regla con el pronóstico de e
 | Promedio de 4 semanas (sin modelo) | 5,019 | 1,029 | 20.5 % | 33.2 % | 0.253 |
 
 - Con el mismo umbral (valor medio), el modelo es **más preciso** que el promedio simple (27.8 % contra 20.5 %) y tiene la mejor F1.
-- La regla publicada usa el percentil 90 a propósito: **anticipa más de la mitad de los faltantes**, a cambio de unas 5 alertas falsas por cada acierto. Para un almacén es preferible revisar alertas de más que quedarse sin producto.
+- La regla p90, publicada hasta la Fase 2, usaba el percentil 90 a propósito: **anticipa más de la mitad de los faltantes**, a cambio de unas 5 alertas falsas por cada acierto. Para un almacén es preferible revisar alertas de más que quedarse sin producto.
 - El umbral se puede ajustar según el costo relativo de un faltante frente al de revisar una alerta. Es una mejora natural para una siguiente versión.
 
 Las alertas se escriben en `ops.alertas_inventario`; los pronósticos, en `ops.predicciones_demanda`; y la versión del modelo con sus métricas, en `ops.modelos`.
@@ -134,3 +134,15 @@ revisión, con corrección de censura). El cuantil se calibra en abril–diciemb
 Código: `src/datacore/ml/impacto.py`; resultado: [`reports/ml/impacto.md`](../reports/ml/impacto.md). Los supuestos de
 dinero (costo de mantener inventario, precios y costos) son configurables y están listados en el reporte. Los
 pronósticos fuera de muestra se guardan en `data/impacto/` (no se versiona); `--recalcular` los vuelve a generar.
+
+### Regla vigente de la alerta de desabasto (Fase 2 de mejoras)
+
+`python -m datacore.ml alertas` compara, fuera de muestra, la regla p90, la media, un umbral único afinado, un umbral por
+segmento (clase ABC × tiempo de entrega) y la media con corrección de censura. La regla se eligió con los bloques de
+2024 y se confirmó en los 4 bloques de 2025: **media + corrección de censura**, con F1 de 0.281 contra 0.239 de la p90
+y 0.275 de la media, mejor en los 4 bloques. La precisión sube de 15.6 % a 25.9 % y la exhaustividad baja de 51.5 % a
+30.9 %. El umbral por segmento **no** se sostuvo (F1 0.269) y no se publica. Detalle en
+[`reports/ml/backtest.md`](../reports/ml/backtest.md); la regla queda registrada en `reports/ml/regla_alertas.json`.
+
+La alerta sirve para priorizar la revisión. Para decidir cuánto y cuándo pedir conviene el nivel objetivo (cuantil de
+la demanda) de `impacto`: reponer solo cuando salta la alerta pierde mucho más (ver `reports/ml/impacto.md`).

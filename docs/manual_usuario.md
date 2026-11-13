@@ -47,7 +47,7 @@ Las genera el modelo de pronóstico cada día:
 
 Para registrar que una alerta ya se atendió, selecciónala en la lista y pulsa **Marcar como atendida**. Desaparece de los pendientes.
 
-> La alerta de desabasto es conservadora a propósito: en las pruebas anticipó alrededor de la mitad de los faltantes reales, a cambio de varias alertas que al final no terminaron en faltante. Úsala como lista de revisión, no como orden de compra automática.
+> En las pruebas, una de cada cuatro alertas de desabasto terminó en un faltante real, y las alertas anticiparon cerca de un tercio de los faltantes. Úsala como lista de revisión priorizada, no como orden de compra automática. Si el producto estuvo agotado en las últimas semanas, la alerta lo toma en cuenta: en ese tiempo se vendió menos de lo que los clientes pidieron.
 
 ### Pronóstico
 1. Busca un producto por nombre o SKU y elige la sucursal (o todas).

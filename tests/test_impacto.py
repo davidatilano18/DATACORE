@@ -100,3 +100,11 @@ def test_impacto_resta_actual_menos_datacore():
                 "inventario_promedio_pesos": 160.0}
     r = im.impacto(actual, datacore)
     assert r["beneficio_neto_pesos"] == 40.0 and r["inventario_liberado_pesos"] == 40.0
+
+
+def test_disparo_por_alerta_pide_menos_veces_que_por_nivel():
+    datos = _datos(n=1, dias=56, existencia=20.0)
+    pron = _pron(datos, [[21.0]] * 8)
+    por_nivel = im.simular_datacore(datos, pron, im.Supuestos(corregir_censura=False, disparo="nivel"), 0.95)
+    por_alerta = im.simular_datacore(datos, pron, im.Supuestos(corregir_censura=False, disparo="alerta"), 0.95)
+    assert por_alerta.pedidos <= por_nivel.pedidos

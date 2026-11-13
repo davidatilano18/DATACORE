@@ -152,3 +152,72 @@ Dispersión binomial negativa estimada en la prueba (Var = μ + μ²/k): h=1: k=
 | modelo (p90) | 36,907 | 11,118 | 5,736 | 15.5% | 51.6% | 0.239 |
 | modelo (media) | 12,107 | 11,118 | 3,194 | 26.4% | 28.7% | 0.275 |
 | promedio 4 semanas | 18,785 | 11,118 | 3,657 | 19.5% | 32.9% | 0.245 |
+
+<!-- inicio: alertas segmentadas -->
+## Mejora de las alertas de desabasto
+
+Generado por `python -m datacore.ml alertas` con las predicciones fuera de muestra de 7 bloques (abril de 2024 a
+diciembre de 2025). Se probaron dos ideas:
+
+1. **Umbral por segmento** (clase ABC × tiempo de entrega: corta 2–4 días, media 5–7, larga 8–10). En cada bloque se
+   elige, con los bloques **anteriores** y por mayor F1, entre la media y los cuantiles 60 a 95; los segmentos con menos
+   de 300 casos usan el mejor umbral único.
+2. **Corrección de censura**: el pronóstico se divide entre (1 − fracción de días agotado en las 4 semanas previas),
+   hasta ×2, porque los pares que se agotan venden menos de lo que se les pide.
+
+### Decisión (bloques de 2024, antes de mirar 2025)
+
+| regla | alertas | faltantes reales | aciertos | precisión | exhaustividad | F1 |
+|---|---|---|---|---|---|---|
+| modelo p90 (publicada) | 27,134 | 8,101 | 4,277 | 15.8% | 52.8% | 0.243 |
+| modelo, media | 8,893 | 8,101 | 2,319 | 26.1% | 28.6% | 0.273 |
+| modelo p90 + censura | 28,337 | 8,101 | 4,403 | 15.5% | 54.4% | 0.242 |
+| **modelo, media + censura** (elegida) | 9,729 | 8,101 | 2,503 | 25.7% | 30.9% | 0.281 |
+
+### Antes y después (los 4 bloques de 2025, 239,271 casos; ningún bloque participó en la elección)
+
+| regla | alertas | faltantes reales | aciertos | precisión | exhaustividad | F1 |
+|---|---|---|---|---|---|---|
+| modelo p90 (publicada) | 36,803 | 11,118 | 5,728 | 15.6% | 51.5% | 0.239 |
+| modelo, media | 12,107 | 11,118 | 3,194 | 26.4% | 28.7% | 0.275 |
+| promedio 4 semanas | 18,785 | 11,118 | 3,657 | 19.5% | 32.9% | 0.245 |
+| umbral único afinado | 16,096 | 11,118 | 3,762 | 23.4% | 33.8% | 0.276 |
+| umbral por segmento | 18,872 | 11,118 | 4,034 | 21.4% | 36.3% | 0.269 |
+| **modelo, media + censura** (elegida) | 13,268 | 11,118 | 3,431 | 25.9% | 30.9% | 0.281 |
+
+### F1 por bloque (la mejor de cada fila en negritas)
+
+| bloque desde | modelo p90 (publicada) | modelo, media | promedio 4 semanas | umbral único afinado | umbral por segmento | modelo, media + censura |
+|---|---|---|---|---|---|---|
+| 2024-12-30 | 0.238 | 0.262 | 0.237 | 0.266 | 0.264 | **0.269** |
+| 2025-03-31 | 0.226 | 0.256 | 0.231 | 0.259 | 0.251 | **0.263** |
+| 2025-06-30 | 0.241 | 0.286 | 0.257 | 0.284 | 0.279 | **0.291** |
+| 2025-09-29 | 0.249 | 0.292 | 0.253 | 0.293 | 0.281 | **0.299** |
+
+**Lectura:**
+
+- La regla elegida, *modelo, media + censura*, sube la F1 de 0.239 (p90 publicada) y de
+  0.275 (media) a **0.281**, con precisión de
+  25.9% (antes 15.6%). Supera a la p90 en
+  4 de 4 bloques; frente a la regla de la media, se sostiene en los 4 bloques.
+- A cambio, la exhaustividad baja de 51.5% a
+  30.9%: la p90 avisa de más faltantes, pero con 5 alertas falsas por acierto.
+- **El umbral por segmento no se sostiene**: supera a la media solo en 1 de 4 bloques y su F1
+  total (0.269) queda por debajo. Con 9 segmentos y pocos faltantes en cada uno,
+  los umbrales se ajustan al ruido de los bloques de entrenamiento. Por eso no se publica.
+- El umbral único afinado elige la media en todos los bloques: confirma que la media es el mejor umbral sin corrección.
+
+### Umbrales que habría elegido la segmentación con los 7 bloques (no se usan)
+
+| segmento (clase · entrega) | umbral que habría elegido |
+|---|---|
+| A·corta | p60 |
+| A·larga | media |
+| A·media | media |
+| B·corta | p95 |
+| B·larga | media |
+| B·media | p70 |
+| C·corta | p95 |
+| C·larga | p70 |
+| C·media | p90 |
+<!-- fin: alertas segmentadas -->
