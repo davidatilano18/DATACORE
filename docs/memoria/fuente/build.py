@@ -99,15 +99,15 @@ class Memoria:
         return nombre, f'<w:bookmarkStart w:id="{900 + self.bm}" w:name="{nombre}"/>{contenido}<w:bookmarkEnd w:id="{900 + self.bm}"/>'
 
     # --- encabezados -------------------------------------------------------------
-    def h1(self, texto, centrado=False, espacio_antes=0):
-        nombre, cont = self.bookmark(run(texto))
-        extra = "<w:pageBreakBefore/>"
+    def h1(self, texto, centrado=False, espacio_antes=0, rpr="", toc=None, salto=True):
+        nombre, cont = self.bookmark(run(texto, rpr))
+        extra = "<w:pageBreakBefore/>" if salto else ""
         if espacio_antes:
             extra += f'<w:spacing w:before="{espacio_antes}"/>'
         if centrado:
             extra += '<w:jc w:val="center"/>'
         self.body.append(par(cont, "Ttulo1", extra))
-        self.toc_h.append((1, texto, nombre))
+        self.toc_h.append((1, toc or texto, nombre))
 
     def hn(self, nivel, texto):
         nombre, cont = self.bookmark(run(texto))
@@ -281,8 +281,13 @@ def construir(paginas):
                 # Los índices van entre el Abstract y el primer capítulo.
                 marcador_indices = len(m.body)
             m.cap, m.n_fig, m.n_tab = ROMANOS[romano], 0, 0
-            m.h1(titulo, centrado=True, espacio_antes=3600)
-            m.body.append(par(run(sub, '<w:color w:val="8A1538"/><w:sz w:val="32"/><w:szCs w:val="32"/>'), "MemSubCap"))
+            # Portadilla como el formato de la UPQ: "CAPÍTULO I." y el nombre debajo, grandes, negros
+            # y en negrita, a media hoja. En el índice queda "CAPÍTULO I ANTECEDENTES".
+            grande = '<w:b/><w:bCs/><w:color w:val="000000"/><w:sz w:val="56"/><w:szCs w:val="56"/>'
+            # El espacio antes se ignora al inicio de página; un renglón vacío de alto fijo baja el título.
+            m.body.append(par("", None, '<w:pageBreakBefore/><w:spacing w:before="0" w:after="0" w:line="4600" w:lineRule="exact"/>'))
+            m.h1(f"CAPÍTULO {romano}.", centrado=True, rpr=grande, toc=titulo, salto=False)
+            m.body.append(par(run(sub, grande), "MemSubCap", '<w:spacing w:before="480"/>'))
             m.salto()
             i += 1
         elif ln.startswith("### "):

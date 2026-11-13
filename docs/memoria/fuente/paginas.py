@@ -16,9 +16,11 @@ textos = [norm(p.get_text()) for p in pdf]
 toc = pdf.get_toc(simple=True)
 paginas, sin = {}, []
 pendientes = [(bm, t) for bm, t in mapa.items() if not t.startswith(("Figura ", "Tabla "))]
+# En la portadilla el capítulo se escribe "CAPÍTULO I." (el índice dice "CAPÍTULO I ANTECEDENTES").
+clave = lambda t: (lambda m: f"CAPÍTULO {m[1]}." if m else t)(re.match(r"CAPÍTULO ([IVX]+) ", t))
 j = 0
 for bm, t in pendientes:
-    while j < len(toc) and norm(toc[j][1]) != norm(t):
+    while j < len(toc) and norm(toc[j][1]) != norm(clave(t)):
         j += 1
     if j < len(toc):
         paginas[bm] = toc[j][2]
