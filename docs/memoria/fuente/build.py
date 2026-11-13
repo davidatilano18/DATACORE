@@ -383,7 +383,7 @@ def portada(xml):
         assert xml.count(viejo) == veces, (viejo, xml.count(viejo))
         xml = xml.replace(viejo, nuevo)
     rep("<w:t>xx</w:t>", "<w:t>DATACORE: Plataforma Inteligente de Gestión, Monitoreo y Análisis de Datos Empresariales</w:t>")
-    rep("<w:t>gg</w:t>", "<w:t>David Israel Atilano Quiroz</w:t><w:br/><w:t>Ricardo Leonel Ordaz Aguilar</w:t>")
+    rep("<w:t>gg</w:t>", "<w:t>David Israel Atilano Quiroz</w:t>")  # el reporte es individual
     rep("<w:t>dff</w:t>", "<w:t>René Santana Cruz</w:t>")
     rep("<w:t>ff</w:t>", "<w:t>Adela Becerra Chávez</w:t>")
     # Asesor externo y mes de entrega (datos del usuario).
@@ -392,7 +392,7 @@ def portada(xml):
     xml = re.sub(r'(<w:rPr>(?:(?!</w:rPr>).)*?)(</w:rPr><w:t>)Mayo(</w:t>)',
                  r'\1\2Noviembre\3', xml)
     assert "dsd" not in xml and ">Mayo<" not in xml
-    # El título y los dos nombres ocupan tres renglones más: se quitan tres renglones vacíos
+    # El título largo y el nombre ocupan dos renglones más: se quitan dos renglones vacíos
     # antes del lugar y la fecha para que no se salgan del recuadro.
     vacio = re.compile(r'<w:p [^>]*>(?:<w:pPr>(?:(?!</w:pPr>).)*</w:pPr>)?</w:p>', re.S)
     marcas = [mm.start() for mm in re.finditer(r"Dra\. Karina Anaya<", xml)]
@@ -400,8 +400,8 @@ def portada(xml):
         fin = xml.find("El Marqu", ini)
         seg = xml[ini:fin]
         vacios = list(vacio.finditer(seg))
-        assert len(vacios) >= 3, len(vacios)
-        for v in reversed(vacios[:3]):
+        assert len(vacios) >= 2, len(vacios)
+        for v in reversed(vacios[:2]):
             seg = seg[:v.start()] + seg[v.end():]
         xml = xml[:ini] + seg + xml[fin:]
     return xml

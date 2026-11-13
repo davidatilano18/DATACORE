@@ -63,13 +63,11 @@ A partir de las limitaciones se proponen las siguientes mejoras:
 - Extender la corrección de correos a variantes como .con.mx.
 - Probar la plataforma con datos de una empresa real, aprovechando que el ETL ya maneja los formatos y defectos más comunes.
 
-## 5.6 Experiencia del equipo
+## 5.6 Experiencia y reflexión personal
 
 El proyecto permitió al equipo recorrer el ciclo completo de una plataforma de datos, desde el diseño hasta la operación, y no solo la etapa de modelado que suele dominar los proyectos escolares. El equipo comprobó que la mayor parte del trabajo de un sistema de datos ocurre antes y después del modelo: en entender las fuentes, limpiar los datos, decidir cómo medir y asegurar que todo siga funcionando al día siguiente.
 
 El uso de asistentes de programación con inteligencia artificial aceleró el desarrollo, pero también dejó claro que su trabajo requiere revisión. Los errores más importantes del proyecto, como la elección de la prueba estadística del detector de anomalías o la pérdida del historial de pronósticos al recargar los datos, se encontraron gracias a la revisión humana y a las pruebas automatizadas.
-
-### 5.6.1 Reflexión de David Israel Atilano Quiroz
 
 Para David Israel Atilano Quiroz, DATACORE nació de una decisión. Mientras buscaba vacantes de analista de datos, en lugar de ver la espera como tiempo perdido, decidió usarla para prepararse. Quería que el proyecto sirviera fuera del aula: entender cómo se trabaja con datos en una empresa real y qué podría ofrecerle desde el primer día. Por eso no se quedó en un modelo aislado. Fue la primera vez que construyó un sistema de datos completo, de principio a fin. Empezó simulando tres años de operación de NexaTech con defectos puestos a propósito, como los que llegan de las distintas áreas de un negocio. Después vinieron un ETL que los detecta, un modelo de pronóstico, una API y un dashboard que se respaldan, se monitorean y se prueban de forma automática.
 
@@ -78,10 +76,6 @@ La lección más importante fue que un resultado no vale hasta que se demuestra 
 Lo más difícil, y también lo más interesante, fue darse cuenta de que las ventas no son la demanda. Cuando un producto se agota, el historial no muestra a los clientes que no lo encontraron, y un modelo entrenado solo con ventas aprende a pedir de menos. Corregir ese sesgo, junto con ajustar el umbral, subió la F1 de las alertas de 0.239 a 0.281. Así, el proyecto pasó de "el modelo predice" a "el sistema le dice a cada sucursal cuánto pedir, para cuándo y por qué". También aprendió a usar asistentes de programación con inteligencia artificial como herramientas que aceleran el trabajo, pero cuyo resultado se revisa y se prueba antes de confiar en él.
 
 Al terminar, la pregunta con la que empezó tiene una respuesta concreta, y el tiempo de espera se convirtió en experiencia. Hoy puede ofrecerle a una empresa más que gráficas: datos limpios y confiables, indicadores que se pueden verificar y recomendaciones traducidas a dinero y a decisiones que cualquier persona del negocio puede entender. Todo se validó con datos simulados, así que su siguiente paso es aplicar esta misma forma de trabajar con datos reales, como analista de datos.
-
-### 5.6.2 Reflexión de Ricardo Leonel Ordaz Aguilar
-
-Durante el desarrollo del proyecto, Ricardo Leonel Ordaz Aguilar comprendió que construir una plataforma de datos no consiste únicamente en desarrollar un modelo, sino que requiere un proceso completo de análisis, preparación, validación y organización de la información. Su participación en la revisión de los avances de cada fase y en la preparación de la defensa le permitió entender mejor las decisiones técnicas que se tomaron, así como la importancia de utilizar métodos adecuados para obtener resultados confiables. También aprendió que técnicas como la pérdida Poisson, pensada para conteos con muchos ceros, y la validación con origen móvil, que evita usar datos del futuro, cumplen una función importante para mejorar las predicciones y evitar errores en el análisis. Finalmente, el proyecto le permitió fortalecer sus conocimientos en el manejo de datos, desarrollar una visión más completa del trabajo en equipo y comprender cómo las herramientas de análisis pueden utilizarse para resolver problemas reales y apoyar la toma de decisiones.
 
 #! REFERENCIAS BIBLIOGRÁFICAS
 

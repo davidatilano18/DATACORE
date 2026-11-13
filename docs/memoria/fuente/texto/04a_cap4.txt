@@ -9,7 +9,7 @@ El proyecto se organizó en ocho fases de dos semanas, cada una con un entregabl
 [FIGURA cronograma.png 16] Cronograma del proyecto en fases de dos semanas
 [NOTA] Elaboración propia con base en la propuesta del proyecto.
 
-El proyecto se desarrolló en equipo. Al cierre de cada fase, los avances, las decisiones de diseño y los resultados se revisaron en conjunto antes de pasar a la siguiente, de modo que ambos integrantes conocieran el funcionamiento completo de la solución: desde la simulación de datos y el proceso ETL hasta los modelos de pronóstico, la API y el dashboard.
+El proyecto se desarrolló en pareja. Al cierre de cada fase, los avances, las decisiones de diseño y los resultados se revisaron en conjunto antes de pasar a la siguiente, de modo que ambos integrantes conocieran el funcionamiento completo de la solución: desde la simulación de datos y el proceso ETL hasta los modelos de pronóstico, la API y el dashboard.
 
 El trabajo se apoyó en cuatro prácticas:
 
