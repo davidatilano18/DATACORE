@@ -1,0 +1,9 @@
+# Archivos intermedios del generador (ciclo.sh); la versión final se copia a docs/memoria/
+build/
+pdf/
+hojas/
+mapa.json
+paginas.json
+paginas_prev.json
+captions.txt
+Memoria_Estadia_DATACORE.docx

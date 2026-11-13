@@ -1,0 +1,197 @@
+# CAPÍTULO IV DESARROLLO DEL PROYECTO | DESARROLLO DEL PROYECTO
+
+## 4.1 Desarrollo de las etapas
+
+### 4.1.1 Metodología y organización del trabajo
+
+El proyecto se organizó en ocho fases de dos semanas, cada una con un entregable concreto que se versionó junto con su documentación. La Figura 4.1 muestra el cronograma.
+
+[FIGURA cronograma.png 16] Cronograma del proyecto en fases de dos semanas
+[NOTA] Elaboración propia con base en la propuesta del proyecto.
+
+El proyecto se desarrolló en equipo. Al cierre de cada fase, los avances, las decisiones de diseño y los resultados se revisaron en conjunto antes de pasar a la siguiente, de modo que ambos integrantes conocieran el funcionamiento completo de la solución: desde la simulación de datos y el proceso ETL hasta los modelos de pronóstico, la API y el dashboard.
+
+El trabajo se apoyó en cuatro prácticas:
+
+- Control de versiones. El código y la documentación viven en un repositorio privado de GitHub. Cada cambio se registra con un mensaje descriptivo, lo que deja un historial auditable del avance.
+- Documentación continua. Cada decisión de diseño se registró en la carpeta docs del repositorio en el momento de tomarla, en lugar de dejar toda la documentación para el final. Los seis documentos técnicos y los dos manuales son la base de este reporte.
+- Pruebas automatizadas. Cada módulo nuevo se entregó con sus pruebas, y la integración continua las ejecuta con cada cambio.
+- Asistentes de programación con inteligencia artificial. Se usaron agentes de código (Claude y Codex) como herramienta para acelerar tareas acotadas, como el análisis exploratorio, las vistas de indicadores, la detección de anomalías y varias páginas del dashboard. Un archivo AGENTS.md en el repositorio fija sus reglas: convenciones de código, estructura del proyecto y restricciones del equipo. Todo cambio propuesto por un agente pasó por revisión humana y por las pruebas automatizadas antes de integrarse. Durante esa revisión se detectaron y corrigieron errores reales, como la elección de la prueba estadística del detector de anomalías y la pérdida del historial de pronósticos al recargar los datos, descritas más adelante.
+
+### 4.1.2 Primera etapa: requerimientos y alcance
+
+En la primera etapa se definieron el problema, el alcance, los supuestos y los riesgos, y se redactaron los requerimientos. Se establecieron 13 requerimientos funcionales, de los cuales 9 son de prioridad alta (Tabla 4.1), y 8 requerimientos no funcionales (Tabla 4.2).
+
+[TABLA] Requerimientos funcionales
+| ID | Requerimiento | Prioridad |
+| RF-01 | Generar un dataset simulado reproducible de unos 3 años, con defectos controlados y su bitácora. | Alta |
+| RF-02 | Ingerir automáticamente los archivos de todas las áreas (CSV, Excel, distintas codificaciones). | Alta |
+| RF-03 | Limpiar, estandarizar y validar los datos con reglas de calidad configurables. | Alta |
+| RF-04 | Registrar cada hallazgo de calidad y cada ejecución del ETL. | Alta |
+| RF-05 | Cargar los datos validados en una base relacional con integridad referencial. | Alta |
+| RF-06 | Calcular indicadores de ventas, ticket promedio, rotación, cobertura y desabasto. | Alta |
+| RF-07 | Pronosticar la demanda semanal por producto y sucursal. | Alta |
+| RF-08 | Generar alertas de desabasto, exceso de inventario y productos sin rotación. | Alta |
+| RF-09 | Exponer datos, indicadores, predicciones y alertas mediante una API. | Media |
+| RF-10 | Ofrecer un dashboard interactivo con filtros por fecha, sucursal y categoría. | Alta |
+| RF-11 | Respaldar la base de datos automáticamente y poder restaurarla. | Media |
+| RF-12 | Monitorear la disponibilidad de los servicios y registrar eventos. | Media |
+| RF-13 | Detectar anomalías en ventas o inventario (complementario). | Baja |
+[NOTA] Elaboración propia.
+
+[TABLA] Requerimientos no funcionales
+| ID | Requerimiento |
+| RNF-01 | Reproducibilidad: el mismo código con la misma semilla produce exactamente los mismos datos. |
+| RNF-02 | Rendimiento: el ETL completo termina en menos de 10 minutos. |
+| RNF-03 | Trazabilidad: todo registro rechazado o corregido puede rastrearse hasta su archivo y fila de origen. |
+| RNF-04 | Idempotencia: volver a correr el ETL sobre los mismos archivos no duplica datos. |
+| RNF-05 | Calidad medible: se reportan la precisión y la exhaustividad de las reglas de calidad. |
+| RNF-06 | Seguridad básica: credenciales fuera del código y un usuario de base de datos de solo lectura. |
+| RNF-07 | Mantenibilidad: código en Python con pruebas automatizadas y documentación al día. |
+| RNF-08 | Portabilidad: ejecución en Windows (desarrollo) y en Linux (servidor). |
+[NOTA] Elaboración propia.
+
+También se identificaron los riesgos principales y su mitigación (Tabla 4.3). El más relevante era que los datos simulados resultaran poco realistas y volvieran trivial el modelo; para evitarlo, las reglas de simulación incluyen estacionalidad, tendencias, demanda censurada, productos nuevos y descontinuados.
+
+[TABLA] Riesgos del proyecto y su mitigación
+| Riesgo | Probabilidad | Impacto | Mitigación |
+| Datos simulados poco realistas que vuelvan trivial el modelo | Media | Alto | Reglas de simulación documentadas con estacionalidad, tendencias, censura y ciclo de vida. |
+| Bibliotecas sin paquetes precompilados para Python 3.15 | Media | Medio | Verificación temprana de dependencias; Python 3.13 como alternativa. |
+| No contar con un servidor a tiempo | Media | Medio | Contenedor independiente del proveedor y plan de despliegue documentado. |
+| Carga de trabajo desigual entre integrantes | Baja | Medio | Frentes divididos con revisión cruzada. |
+| Alcance demasiado amplio para 16 semanas | Media | Alto | Priorizar los requerimientos de prioridad alta; RF-13 como opcional. |
+[NOTA] Elaboración propia.
+
+### 4.1.3 Segunda etapa: arquitectura y diseño de la base de datos
+
+La arquitectura se organizó en cinco capas (Figura 4.2). El generador produce los archivos de cada área; el ETL los valida y los carga en PostgreSQL; el módulo analítico escribe pronósticos y alertas; la API los sirve, y el dashboard los presenta al usuario. Un proceso programado ejecuta cada noche la cadena completa.
+
+[FIGURA arquitectura.png 16] Arquitectura por capas de DATACORE
+[NOTA] Elaboración propia.
+
+La Tabla 4.4 muestra la tecnología elegida para cada capa y la alternativa que se había considerado en la propuesta. Se eligió una combinación en la que todo es Python y de código abierto, de modo que un solo lenguaje cubre del generador al dashboard.
+
+[TABLA] Tecnologías por capa
+| Capa | Función | Tecnología elegida | Alternativa considerada |
+| Fuentes | Archivos simulados por área | Python con numpy, pandas y Faker | — |
+| Procesamiento | Extracción, limpieza, validación y carga | Python con pandas | — |
+| Persistencia | Almacenamiento relacional | PostgreSQL 16 | MySQL |
+| Analítica e IA | EDA, entrenamiento, evaluación y predicción | scikit-learn, numpy y pandas | — |
+| Servicios | Comunicación entre la base, el modelo y la interfaz | FastAPI | Flask |
+| Visualización | Indicadores, alertas y tendencias | Streamlit | Power BI |
+| Infraestructura | Ejecución, monitoreo y respaldos | Docker, GitHub Actions y cron | VPS dedicado |
+[NOTA] Elaboración propia.
+
+Las decisiones de diseño más importantes se registraron con su motivo (Tabla 4.5). Destaca la segunda: el generador guarda una verdad de referencia limpia que nunca lee el ETL ni el modelo, y que solo se usa para evaluarlos.
+
+[TABLA] Decisiones de diseño
+| Decisión | Motivo |
+| Los archivos crudos usan códigos de negocio (código de sucursal, SKU), no llaves internas. | Así exporta un sistema real; obliga al ETL a resolver las llaves. |
+| El generador guarda una verdad de referencia limpia. | Permite medir objetivamente el ETL y las reglas de calidad. |
+| Las ventas se recortan según la existencia disponible. | La demanda no surtida no aparece en las ventas, como en la realidad. |
+| Los datos no se versionan; se regeneran con la semilla. | Pesan unos 80 MB y se reproducen en unos 15 segundos. |
+| Las tablas de salida del modelo no tienen llave foránea hacia los datos de negocio. | El ETL recarga los datos de negocio por completo y no debe borrar el historial de pronósticos. |
+[NOTA] Elaboración propia.
+
+La base de datos se dividió en tres esquemas. El esquema core guarda los datos de negocio ya validados en diez tablas; el esquema ops guarda la operación de la plataforma, y el esquema kpi contiene las vistas de indicadores. La Figura 4.3 presenta el modelo entidad-relación del esquema core y la Tabla 4.6 resume los tres esquemas. El diccionario de datos completo se incluye en el Anexo 1.
+
+[FIGURA modelo_er.png 16] Modelo entidad-relación del esquema core
+[NOTA] Elaboración propia. Las flechas van de la tabla referenciada (1) a la que la referencia (N).
+
+[TABLA] Esquemas de la base de datos
+| Esquema | Contenido | Tablas o vistas principales |
+| core | Datos de negocio validados | sucursales, categorias, proveedores, productos, clientes, ventas, detalle_venta, inventario, movimientos_inventario, incidencias |
+| ops | Operación de la plataforma | etl_ejecuciones, calidad_hallazgos, modelos, predicciones_demanda, alertas_inventario, anomalias, respaldos, monitoreo, corridas |
+| kpi | Indicadores calculados | ventas_diarias_sucursal, ventas_mensuales_categoria, ventas_semanales_producto, abc_productos, cobertura_inventario, desabasto_mensual, resumen_ejecutivo, entre otras |
+[NOTA] Elaboración propia.
+
+Se adoptaron convenciones uniformes: las llaves primarias se llaman id_ seguido del nombre de la entidad; los nombres van en español, sin acentos y en minúsculas separadas por guion bajo; los montos se guardan en pesos mexicanos con dos decimales, y las cantidades de inventario son enteros con signo, positivos cuando el producto entra y negativos cuando sale. Para la seguridad se crearon dos roles: uno dueño de los esquemas, que usan el ETL, el modelo y los respaldos, y otro de solo lectura, que usa la API para sus consultas.
+
+### 4.1.4 Tercera etapa: simulación de datos
+
+El generador de datos produce tres años de operación en unos 15 segundos y siempre da exactamente los mismos datos con la semilla 42, lo que cumple el requerimiento de reproducibilidad. La generación sigue un orden que imita cómo surgen los datos en la realidad:
+
+1. Catálogos: sucursales, categorías, proveedores, productos y clientes.
+2. Demanda: tickets y renglones según la afluencia, el calendario y la mezcla de productos.
+3. Inventario: simulación día a día; la demanda que no alcanza la existencia se pierde.
+4. Ventas finales: los renglones se recortan a lo que realmente se surtió, en orden de llegada.
+5. Incidencias: se derivan de eventos reales de la simulación, como faltantes, retrasos y fallas.
+6. Exportación: se guarda la verdad de referencia y luego se generan los archivos crudos con defectos.
+
+La Tabla 4.7 muestra el volumen resultante.
+
+[TABLA] Volumen de datos generados con la semilla 42
+| Tabla | Filas |
+| Sucursales | 12 |
+| Categorías | 10 |
+| Proveedores | 35 |
+| Productos | 400 |
+| Clientes | 8,000 (más 160 casi duplicados en el archivo crudo) |
+| Ventas (tickets) | 181,054 |
+| Detalle de venta | 640,673 |
+| Movimientos de inventario | 647,613 |
+| Inventario (pares sucursal-producto) | 4,800 |
+| Incidencias | 6,720 |
+| Órdenes de compra (oculta) | 124,072 |
+[NOTA] Elaboración propia con base en docs/04_simulacion.md.
+
+La demanda sigue reglas explícitas para que los datos tengan la estructura de una operación real y no sean simples valores aleatorios (Tabla 4.8).
+
+[TABLA] Reglas de generación de la demanda
+| Patrón | Regla |
+| Afluencia por sucursal | Tickets por día con distribución de Poisson: 19 en sucursal grande, 13 en mediana y 8.5 en pequeña. |
+| Maduración | Una sucursal nueva arranca al 45 % de su afluencia y llega al 100 % en unos 6 meses. |
+| Día de la semana | Factores de 0.85 el lunes a 1.35 el sábado. |
+| Quincena | Los días 1, 15, 16 y fin de mes multiplican la afluencia por 1.15. |
+| Fechas especiales | Buen Fin ×1.9 con descuentos; 18 al 24 de diciembre hasta ×1.6; Reyes ×1.5; 10 de mayo ×1.5; 25 de diciembre y 1 de enero ×0.3. |
+| Estacionalidad por categoría | Perfiles mensuales: Bebidas en verano, Electrónica a fin de año, Papelería en agosto, Juguetes en diciembre, enero y abril. |
+| Popularidad | Distribución lognormal: pocos productos concentran la mayor parte de las ventas. |
+| Tendencia | Crecimiento anual por producto con media de 6 % y desviación de 12 %; tráfico +3 % anual. |
+| Afinidad regional | Multiplicador de 0.7 a 1.3 por región y categoría. |
+| Ciclo de vida | Unos 8 % de los productos se lanzan dentro del periodo y unos 5 % se descontinúan. |
+| Clientes | Cada cliente compra 90 % en su sucursal preferida; los mayoristas llevan más renglones y cuatro veces la cantidad. |
+| Precios | Lista anual con inflación de alrededor de 5 %, actualizada cada enero. |
+| Fallas de sistema | Unas 0.8 fallas por sucursal al mes; ese día la afluencia baja en proporción a las horas sin servicio. |
+[NOTA] Elaboración propia con base en docs/04_simulacion.md.
+
+El inventario se simula día a día con una política (s, S) por par sucursal-producto. El punto de reorden cubre la demanda estimada durante el tiempo de entrega más un inventario de seguridad, y el nivel máximo agrega entre 10 y 35 días de cobertura. Para que la simulación produzca los problemas reales que la plataforma debe atacar, la demanda estimada de cada par tiene un error fijo de entre −45 % y +45 %, se recalibra cada 90 días con las ventas observadas y no con la demanda, y los proveedores se retrasan con una probabilidad de 3 a 35 %. También hay mermas en productos perecederos, ajustes por conteo físico al cierre de cada trimestre y productos descontinuados que dejan inventario muerto. Así surgen de forma natural tanto el desabasto como el exceso.
+
+Al exportar los archivos, el generador inyecta defectos controlados y registra cada uno en una bitácora con la tabla, la llave, el tipo, el valor original y el valor sucio. La Figura 4.4 muestra los 18 tipos y su frecuencia. A estos defectos se suman los problemas estructurales de formato: el archivo de clientes en Windows-1252 con punto y coma, los catálogos en Excel y las ventas partidas por año.
+
+[FIGURA defectos.png 15] Defectos inyectados en los archivos crudos por tipo
+[NOTA] Elaboración propia. Total: 16,502 defectos.
+
+### 4.1.5 Cuarta etapa: ETL y reglas de calidad
+
+El ETL sigue el flujo de la Figura 4.5. Extrae los archivos de las cinco áreas, estandariza los valores, aplica las reglas de calidad, traduce los códigos de negocio a llaves internas, carga los datos en una sola transacción mediante el comando COPY de PostgreSQL y, opcionalmente, evalúa el resultado contra la verdad de referencia.
+
+[FIGURA flujo_etl.png 16] Flujo del proceso ETL
+[NOTA] Elaboración propia.
+
+Cada regla registra sus hallazgos en ops.calidad_hallazgos con la tabla, la llave del registro, el nombre de la regla, la acción tomada y los valores antes y después. Las reglas que atacan un defecto del generador llevan el mismo nombre que el tipo de defecto, lo que permite medir automáticamente su precisión y exhaustividad. La Tabla 4.9 resume las reglas principales y su acción.
+
+[TABLA] Reglas de calidad principales del ETL
+| Regla | Tabla | Acción |
+| venta_duplicada, detalle_duplicado | ventas, detalle_venta | Corregir: se conserva un solo registro. |
+| venta_fecha_formato_alterno | ventas | Corregir: se convierte al formato ISO. |
+| venta_fecha_futura | ventas | Corregir: se toma el año del archivo anual del que proviene el ticket. |
+| venta_metodo_pago_faltante | ventas | Marcar para revisión. |
+| venta_total_inconsistente | ventas | Corregir: el total se recalcula con la suma de los renglones. |
+| sucursal_codigo_sucio | ventas | Corregir: mayúsculas, sin espacios ni guiones. |
+| detalle_cantidad_negativa | detalle_venta | Corregir: se toma el valor absoluto. |
+| detalle_precio_escala | detalle_venta | Corregir: se reconstruye a partir del subtotal o se reescala por 10. |
+| detalle_producto_inexistente | detalle_venta | Rechazar. |
+| cliente_casi_duplicado | clientes | Corregir: se fusiona con el registro original (mismo nombre normalizado y fecha de registro). |
+| cliente_email_invalido | clientes | Corregir si es recuperable; si no, marcar. |
+| cliente_email_faltante, cliente_telefono_faltante | clientes | Marcar. |
+| cliente_estado_variante | clientes | Corregir: se normaliza al nombre oficial del estado. |
+| producto_categoria_faltante | productos | Corregir: se infiere por el prefijo del SKU. |
+| producto_costo_mayor_precio | productos | Corregir: se imputa el costo con el margen mediano de su categoría. |
+| movimiento_cantidad_cero | movimientos_inventario | Corregir con la diferencia de existencias del par; si no se puede, rechazar. |
+[NOTA] Elaboración propia con base en src/datacore/etl/transformacion.py.
+
+El ETL no se limita a descartar registros defectuosos: también recupera información. Los clientes casi duplicados se identifican por su nombre normalizado, sin acentos ni diferencias de mayúsculas, y su fecha de registro; se fusionan con el registro original y sus compras se reasignan a él. Para detectar un precio con el punto decimal mal puesto, se compara contra la mediana del mismo producto en ese año; si el subtotal capturado es coherente, el precio se reconstruye a partir de él, porque multiplicar por 10 no recupera los centavos ya redondeados. Las fechas en formato alterno se convierten y las fechas con un año fuera del archivo anual se corrigen con el año de ese archivo. Cuando se rechaza un renglón de venta, el total del ticket se ajusta para que siga cuadrando con su detalle.
+
+Además de las reglas ligadas a defectos inyectados, el ETL aplica validaciones estructurales que no dependen del generador: llaves inválidas, ventas sin detalle, detalles sin venta, movimientos de inventario que no cuadran con la existencia resultante y estados de cliente desconocidos. Estas reglas protegen la base de datos ante defectos que el simulador no contempla.
+
+La carga completa tarda unos 50 segundos, muy por debajo del límite de 10 minutos del requerimiento RNF-02. Como el ETL recarga el esquema core dentro de una transacción, volver a ejecutarlo sobre los mismos archivos produce exactamente el mismo resultado, lo que cumple el requerimiento de idempotencia. Al terminar, refresca las vistas materializadas del esquema kpi.

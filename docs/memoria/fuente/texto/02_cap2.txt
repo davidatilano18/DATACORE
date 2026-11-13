@@ -1,0 +1,119 @@
+# CAPÍTULO II MARCO TEÓRICO | MARCO TEÓRICO
+
+## 2.1 Ingeniería de datos y arquitectura por capas
+
+La ingeniería de datos se ocupa de diseñar y operar los sistemas que obtienen, almacenan, transforman y entregan datos para su análisis. Un sistema de datos confiable debe ser correcto aun ante fallas, escalable cuando crece el volumen y mantenible por quienes lo heredan (Kleppmann, 2017). Para lograrlo se organiza por capas con responsabilidades separadas: una capa de fuentes, una de procesamiento, una de persistencia, una de analítica y una de servicios y visualización. Separar las capas permite cambiar una pieza, por ejemplo el motor de visualización, sin rehacer las demás.
+
+Dos propiedades atraviesan todas las capas. La reproducibilidad garantiza que el mismo código con los mismos datos de entrada produce exactamente los mismos resultados, lo que permite verificar cualquier cifra. La trazabilidad permite seguir un dato desde el reporte final hasta su archivo y fila de origen.
+
+## 2.2 Procesos ETL
+
+Un proceso ETL (extracción, transformación y carga) reúne datos de fuentes heterogéneas, los lleva a un formato común y los carga en un repositorio central (Kimball y Ross, 2013). En la extracción se leen archivos con distintas codificaciones, separadores y estructuras. En la transformación se limpian y estandarizan los valores, se aplican reglas de negocio y se resuelven las llaves: los códigos que usan los sistemas de origen se traducen a los identificadores internos del repositorio. En la carga, los registros validados se escriben en la base de datos, de preferencia en una sola transacción para que una falla a la mitad no deje datos incompletos.
+
+Un ETL bien diseñado es idempotente: correrlo dos veces sobre los mismos archivos produce el mismo resultado y no duplica registros. También deja una bitácora de cada ejecución, con las filas leídas, cargadas y rechazadas, y de cada hallazgo de calidad.
+
+## 2.3 Calidad de datos
+
+La calidad de datos se define como la aptitud de los datos para el uso que se les quiere dar (Wang y Strong, 1996). Se evalúa en varias dimensiones, resumidas en la Tabla 2.1.
+
+[TABLA] Dimensiones de la calidad de datos
+| Dimensión | Pregunta que responde | Ejemplo de defecto |
+| Completitud | ¿Están todos los valores requeridos? | Un cliente sin correo electrónico. |
+| Unicidad | ¿Cada entidad aparece una sola vez? | El mismo ticket registrado dos veces. |
+| Validez | ¿Los valores cumplen el formato y el dominio esperados? | Una fecha en otro formato o un correo sin arroba. |
+| Consistencia | ¿Los datos relacionados concuerdan entre sí? | Un total que no coincide con la suma de sus renglones. |
+| Exactitud | ¿El valor refleja la realidad? | Un precio capturado con el punto decimal mal puesto. |
+| Integridad referencial | ¿Las referencias apuntan a entidades que existen? | Un renglón de venta con un producto inexistente. |
+[NOTA] Elaboración propia con base en Wang y Strong (1996) y Batini y Scannapieco (2016).
+
+Una regla de calidad revisa una de estas dimensiones y, ante un registro defectuoso, toma una acción: lo corrige si el valor correcto se puede recuperar, lo rechaza si no se puede usar, o lo marca para revisión si es utilizable pero sospechoso. Cuando se conoce cuáles registros tienen defecto, el desempeño de una regla se mide con dos métricas tomadas de la recuperación de información. La precisión indica qué fracción de los registros que la regla señaló eran realmente defectuosos; la exhaustividad, o recall, indica qué fracción de los registros defectuosos fue señalada.
+
+[ECUACION] Precisión = VP / (VP + FP)          Exhaustividad = VP / (VP + FN) | 2.1
+
+donde VP son los verdaderos positivos, FP los falsos positivos y FN los falsos negativos. Cuando se necesita un solo número que equilibre ambas métricas se usa la medida F1, su media armónica:
+
+[ECUACION] F1 = 2 · Precisión · Exhaustividad / (Precisión + Exhaustividad) | 2.2
+
+## 2.4 Modelo relacional y PostgreSQL
+
+El modelo relacional, propuesto por Codd (1970), organiza los datos en relaciones o tablas, cada una con una llave primaria que identifica sus filas de manera única. Las llaves foráneas expresan los vínculos entre tablas y permiten al gestor de base de datos garantizar la integridad referencial: no se puede registrar una venta en una sucursal que no existe. La normalización reparte los datos en tablas de forma que cada hecho se guarde en un solo lugar, lo que evita contradicciones.
+
+En los sistemas analíticos se distinguen las tablas de catálogo, que describen entidades como sucursales o productos, de las tablas de hechos, que registran eventos como ventas o movimientos de inventario (Kimball y Ross, 2013). Las vistas son consultas guardadas que se comportan como tablas y permiten calcular indicadores sin duplicar datos. Las vistas materializadas guardan además el resultado, lo que acelera las consultas costosas a cambio de tener que refrescarlas cuando cambian los datos.
+
+PostgreSQL es un gestor de bases de datos relacional de código abierto. Entre sus características útiles para una plataforma de datos están los esquemas, que agrupan tablas por propósito; los roles con permisos diferenciados, que permiten que una aplicación solo lea; el tipo JSONB para guardar estructuras semiestructuradas, y las herramientas pg_dump y pg_restore para respaldar y restaurar.
+
+## 2.5 Análisis exploratorio de datos
+
+El análisis exploratorio de datos (EDA) es la etapa en la que se estudian los datos con estadísticas descriptivas y gráficas antes de modelarlos. Su propósito es entender la forma de los datos, encontrar patrones y anomalías, y orientar las decisiones de modelado. En ventas al menudeo, el EDA suele revisar la tendencia y la estacionalidad, las diferencias entre sucursales y categorías, los patrones de calendario y la concentración de las ventas.
+
+La concentración se analiza con el principio de Pareto, según el cual una fracción pequeña de los productos genera la mayor parte del ingreso. La clasificación ABC aplica esta idea al inventario: los productos A generan alrededor del 80 % del ingreso, los B el siguiente 15 % y los C el resto (Silver et al., 2017). Cada clase merece un nivel distinto de atención.
+
+## 2.6 Pronóstico de demanda
+
+### 2.6.1 Series de tiempo y demanda intermitente
+
+Una serie de tiempo es una sucesión de observaciones ordenadas en el tiempo, como las unidades vendidas de un producto cada semana. Sus componentes típicos son la tendencia, la estacionalidad y el ruido (Hyndman y Athanasopoulos, 2021). Los métodos más sencillos sirven como referencia: el pronóstico ingenuo repite el último valor observado, el estacional repite el valor del mismo periodo del año anterior y la media móvil promedia los últimos periodos.
+
+La demanda de un producto en una sucursal suele ser intermitente: muchos periodos en cero y algunos con venta irregular. Croston (1972) propuso pronosticar por separado el tamaño de la demanda cuando ocurre y el intervalo entre ocurrencias. Syntetos y Boylan (2005) demostraron que ese método tiene un sesgo positivo y propusieron una corrección, conocida como SBA, que multiplica el pronóstico por un factor menor que uno.
+
+### 2.6.2 Gradient boosting con pérdida Poisson
+
+El gradient boosting construye un modelo predictivo como suma de muchos árboles de decisión pequeños, donde cada árbol nuevo se ajusta para corregir los errores que dejan los anteriores (Friedman, 2001). La implementación por histogramas agrupa los valores de cada variable en intervalos, lo que acelera el entrenamiento en conjuntos grandes. La biblioteca scikit-learn ofrece esta implementación como HistGradientBoostingRegressor (Pedregosa et al., 2011).
+
+Cuando la variable a predecir es un conteo no negativo con muchos ceros, como las unidades vendidas por semana, conviene entrenar con pérdida Poisson. Esta pérdida modela el logaritmo de la media esperada, de modo que las predicciones siempre son positivas y el error se pondera de forma adecuada para conteos. Un solo modelo global entrenado con todas las series aprende patrones compartidos, como el efecto del Buen Fin en una categoría, y ayuda a pronosticar las series con poca historia.
+
+### 2.6.3 Validación temporal y fuga de información
+
+Un modelo de pronóstico debe evaluarse con datos que no vio durante el entrenamiento y respetando el orden del tiempo. La validación con origen móvil (rolling origin) entrena el modelo con los datos hasta una fecha de corte, lo evalúa en el bloque siguiente y repite el procedimiento avanzando el corte (Tashman, 2000). Así se obtienen varias mediciones fuera de muestra en distintas épocas del año.
+
+El error más grave en esta evaluación es la fuga de información: que alguna variable del modelo use datos posteriores al momento en que se haría el pronóstico. Un modelo con fuga parece excelente en la evaluación y falla en producción. Para pronosticar a h semanas, toda variable debe calcularse con datos hasta la semana t − h.
+
+### 2.6.4 Métricas de error
+
+El error porcentual absoluto medio (MAPE) no está definido cuando el valor real es cero, lo que lo vuelve inútil para demanda intermitente (Hyndman y Koehler, 2006). En su lugar se usa el error absoluto porcentual ponderado (WAPE), que divide la suma de los errores absolutos entre la suma de los valores reales y, por lo tanto, pondera cada error por el volumen:
+
+[ECUACION] WAPE = Σ |yₜ − ŷₜ| / Σ yₜ | 2.3
+
+El sesgo indica si el modelo tiende a quedarse corto o a pasarse. Un sesgo negativo significa que el modelo subestima la demanda:
+
+[ECUACION] Sesgo = Σ (ŷₜ − yₜ) / Σ yₜ | 2.4
+
+### 2.6.5 Demanda censurada
+
+Cuando un producto se agota, la venta registrada es menor que la demanda real: los clientes que no encontraron el producto no quedan registrados. Este fenómeno se conoce como demanda censurada. Un modelo entrenado solo con ventas aprende a predecir ventas, no demanda, y por lo tanto la subestima justo en los productos que más se agotan. Las estrategias para atenuarlo incluyen excluir del entrenamiento los periodos con faltante o informar al modelo, mediante variables de disponibilidad, cuándo la venta estuvo limitada.
+
+### 2.6.6 Intervalos de pronóstico
+
+Un pronóstico puntual no indica cuánto puede desviarse la demanda real. Para decidir inventarios se necesitan intervalos: un rango en el que se espera que caiga la demanda con cierta probabilidad. Para conteos con más variabilidad de la que admite la distribución de Poisson, se usa la distribución binomial negativa, cuya varianza crece con el cuadrado de la media:
+
+[ECUACION] Var(Y) = μ + μ² / k | 2.5
+
+donde μ es la media pronosticada y k es un parámetro de dispersión que se estima a partir de los errores históricos. Con esta distribución se obtienen percentiles, por ejemplo el percentil 90 de la demanda durante el tiempo de reposición.
+
+## 2.7 Gestión de inventarios
+
+La gestión de inventarios busca equilibrar dos costos: el de quedarse sin producto, que se traduce en ventas perdidas y clientes insatisfechos, y el de tener producto de más, que inmoviliza capital, ocupa espacio y arriesga mermas (Silver et al., 2017). En una política (s, S) se revisa la existencia periódicamente y, cuando cae por debajo del punto de reorden s, se pide lo necesario para llegar al nivel máximo S.
+
+El punto de reorden debe cubrir la demanda esperada durante el tiempo de entrega del proveedor más un inventario de seguridad que absorba la variabilidad. La cobertura de inventario expresa cuántos días alcanza la existencia actual al ritmo de venta esperado; una cobertura muy alta indica exceso y una cobertura cero, desabasto.
+
+## 2.8 Detección de anomalías
+
+Una anomalía es una observación que se aleja de lo esperado más de lo que explica la variación normal. Su detección requiere dos piezas: un valor esperado, calculado solo con datos pasados, y una prueba que decida si la diferencia es demasiado grande. Para conteos, como el número de tickets diarios de una sucursal, la prueba puede basarse en la cola de la distribución de Poisson: si la probabilidad de observar un valor tan bajo es menor que un umbral, por ejemplo 1 %, el día se marca como anómalo.
+
+Para montos, que no son conteos, se usan medidas robustas como la mediana y la desviación absoluta mediana (MAD), que no se distorsionan por valores extremos (Rousseeuw y Croux, 1993). Un puntaje z robusto mide cuántas MAD se aleja una observación de la mediana.
+
+## 2.9 Servicios web y visualización
+
+Una API REST expone datos y operaciones por medio del protocolo HTTP: cada recurso tiene una ruta y se consulta con métodos estándar como GET o POST. Separar la API del resto del sistema permite que distintas aplicaciones consuman los mismos datos sin acceder directamente a la base y que las reglas de seguridad se apliquen en un solo lugar. FastAPI es un marco de Python para construir APIs que valida automáticamente los parámetros de entrada y genera documentación interactiva.
+
+Un dashboard presenta indicadores, tendencias y alertas en forma visual para apoyar decisiones. Su valor depende de que muestre pocas cifras relevantes con claridad, en lugar de muchas gráficas sin jerarquía. Streamlit es un marco de Python que permite construir aplicaciones web de datos con poco código.
+
+## 2.10 Operación de plataformas de datos
+
+Una plataforma de datos en producción necesita mecanismos que aseguren su continuidad. Un respaldo solo es útil si se puede restaurar, por lo que la práctica recomendada es probar la restauración de forma periódica y verificar que los datos restaurados coincidan con los originales. El monitoreo revisa que cada servicio responda y que los procesos programados se hayan ejecutado a tiempo, y las bitácoras registran lo ocurrido para diagnosticar fallas.
+
+La integración continua (CI) ejecuta automáticamente las pruebas del sistema con cada cambio al código, de modo que un error se detecta en minutos y no semanas después (Fowler, 2006). Los contenedores, como los de Docker, empaquetan una aplicación con todas sus dependencias para que se ejecute igual en la computadora de desarrollo y en el servidor (Merkel, 2014).
+
+## 2.11 Objetivos de Desarrollo Sostenible
+
+La Agenda 2030 de las Naciones Unidas establece 17 Objetivos de Desarrollo Sostenible (Organización de las Naciones Unidas, 2015). Dos de ellos se relacionan con este proyecto. El ODS 9, Industria, innovación e infraestructura, promueve infraestructura resiliente y la modernización tecnológica de las empresas. El ODS 12, Producción y consumo responsables, busca reducir el desperdicio a lo largo de las cadenas de suministro, lo que en el comercio incluye evitar el exceso de inventario que termina en mermas o en productos que no se venden.

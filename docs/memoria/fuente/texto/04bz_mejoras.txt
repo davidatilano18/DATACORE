@@ -1,0 +1,52 @@
+### 4.1.11 Novena etapa: de plataforma que funciona a plataforma que demuestra su valor
+
+Con la plataforma completa y probada, el equipo se planteó una pregunta distinta: ¿cuánto vale DATACORE para el negocio? Que el modelo pronostique mejor que una media móvil no dice cuánto dinero ahorra ni qué debe hacer un comprador con una alerta. Para responderlo se trabajó en cinco mejoras, cada una con su propio commit, sus pruebas y su documentación: medir el impacto en dinero, mejorar la alerta de desabasto, convertir cada alerta en una recomendación de pedido, explicar el porqué de cada alerta y preparar el despliegue. En paralelo se rediseñó el dashboard.
+
+En todas las mejoras se aplicó la misma regla de trabajo: ninguna decisión se toma mirando el periodo con el que se evalúa. Cuando una idea no se sostuvo fuera de muestra, se documentó y no se publicó.
+
+### 4.1.12 Mejora 1: impacto en dinero
+
+El módulo ml/impacto.py simula día a día el año 2025 sobre la misma demanda real de cada par sucursal-producto, es decir, las ventas más la demanda que no se surtió por falta de existencia, que el simulador registra. Sobre esa demanda se comparan dos políticas de resurtido:
+
+- Política actual: se reproducen las órdenes de compra que NexaTech emitió en 2025, con sus fechas de llegada reales. Antes de usar el simulador se verificó que reproduce lo ocurrido: con las órdenes reales da 46,227 unidades perdidas contra 47,976 registradas; la diferencia de 3.6 % se debe a que se omiten mermas y ajustes de conteo en ambas políticas.
+- Política DATACORE: cada domingo, con el pronóstico fuera de muestra del backtest, se calcula un cuantil de la demanda durante el tiempo de entrega, el retraso esperado del proveedor y la semana de revisión, y se pide lo necesario para cubrirlo, contando la existencia y lo ya pedido.
+
+La primera versión de la política DATACORE perdió más ventas que la política actual. El análisis de los pares con más pérdidas mostró la causa: el modelo aprende de ventas, y un producto que pasó semanas agotado parece venderse poco, cuando en realidad no había qué vender. Es la demanda censurada descrita en el marco teórico. Se corrigió dividiendo el pronóstico entre (1 − fracción de días agotado en las últimas cuatro semanas), con un tope de ×2, información que DATACORE sí tiene al momento de decidir.
+
+El cuantil de reposición no se eligió mirando 2025. Se extendió el backtest a siete bloques, desde abril de 2024, y se calibró en abril a diciembre de 2024 como el menor cuantil con el que DATACORE iguala el nivel de servicio de la política actual. El resultado fue el cuantil 99, que después se aplicó fijo a 2025. Que se necesite un cuantil nominal tan alto indica que la incertidumbre por par está subestimada, algo coherente con el WAPE por par cercano a 77 %.
+
+Los supuestos de dinero son configurables y quedan listados en el reporte reports/ml/impacto.md: precio y costo de la lista vigente sin descuentos, margen igual a precio menos costo y un costo anual de mantener inventario de 25 % del costo, que agrupa capital, almacén, seguro y obsolescencia. Los resultados se presentan en la sección 4.2.8.
+
+### 4.1.13 Mejora 2: alertas de desabasto más precisas
+
+La alerta original disparaba cuando la existencia era menor que el percentil 90 de la demanda durante la entrega más una semana. Tenía 15.6 % de precisión: cerca de cinco alertas falsas por cada acierto. El módulo ml/alertas_segmentadas.py comparó cinco reglas con una evaluación anidada: cada trimestre de 2025 se evalúa con reglas elegidas solo con los trimestres anteriores, de modo que el periodo evaluado nunca participa en la elección.
+
+- Regla p90, la publicada hasta entonces.
+- Regla de la media: la existencia contra la demanda esperada, sin colchón.
+- Umbral único afinado: el mejor cuantil, elegido con los trimestres previos.
+- Umbral por segmento: un cuantil distinto por clase ABC y por tiempo de entrega (corto, medio y largo).
+- Media con corrección de censura, la misma corrección de la mejora 1.
+
+La regla final se decidió con los bloques de 2024 y se confirmó en los cuatro de 2025. Ganó la media con corrección de censura. El umbral por segmento, en cambio, no se sostuvo: con nueve segmentos y pocos faltantes en cada uno, los umbrales se ajustaron al ruido de los trimestres de entrenamiento, por lo que no se publicó. La regla nueva redujo las alertas de desabasto pendientes de 591 a 279. Los resultados detallados están en la sección 4.2.9.
+
+### 4.1.14 Mejora 3: de alertar a recomendar
+
+Una alerta indica un riesgo, pero no dice qué hacer. Para cada alerta de desabasto se calculan ahora tres datos, que se guardan junto con la alerta en ops.alertas_inventario:
+
+- Nivel objetivo: el cuantil 99 de la demanda durante la entrega más una semana (binomial negativa, corregida por censura), es decir, la demanda esperada más un stock de seguridad. Es el mismo cuantil calibrado en la mejora 1.
+- Cantidad sugerida: el nivel objetivo menos la existencia, redondeado hacia arriba, con un mínimo de una unidad.
+- Fecha límite: la fecha de corte más los días que dura la existencia al ritmo esperado, menos los días de entrega; si ya no da tiempo, el día siguiente al corte.
+
+El esquema se amplió con las columnas nivel_objetivo, cantidad_sugerida y fecha_limite, con su migración para las bases existentes. La ruta GET /alertas las devuelve y ordena el riesgo de desabasto por fecha límite, y la página Alertas muestra la cantidad, la fecha y el total sugerido. Con los datos al 31 de diciembre de 2025, las 279 alertas suman 13,334 unidades sugeridas. Como el esquema core no registra órdenes en camino, la cantidad no descuenta lo ya pedido; el manual de usuario lo indica.
+
+Al repetir la simulación de la mejora 1 con una política que solo pide cuando salta la alerta, el nivel de servicio cayó a 89.4 %. La alerta se optimizó para avisar con el mejor equilibrio entre aciertos y falsas alarmas, por lo que su umbral no lleva colchón; usada como punto de reorden, el pedido llega tarde. La conclusión se incorporó al diseño: la alerta prioriza qué revisar y el nivel objetivo decide cuánto pedir.
+
+### 4.1.15 Mejora 4: explicar cada alerta, rediseño y preparación del despliegue
+
+Cada alerta incluye ahora sus dos o tres factores principales en lenguaje sencillo, en la columna motivos. El módulo ml/explicaciones.py aplica reglas transparentes sobre las mismas cantidades con las que se decide la alerta: cuántos días alcanza la existencia contra los días de entrega, la tendencia frente a las últimas ocho semanas, los eventos de calendario próximos, la temporada alta de la categoría, los días que el producto estuvo agotado y la lentitud del proveedor. Cada regla aporta un factor con un puntaje de gravedad y se conservan los de mayor puntaje. Un ejemplo real: "La existencia alcanza para 5 días y un pedido tarda 7 días; se acerca el fin de año; estuvo agotado 4 de los últimos 28 días: vendió menos de lo que se le pidió".
+
+Se prefirieron reglas a la atribución del modelo, como SHAP, por tres razones: la alerta compara existencia contra demanda, así que su porqué se entiende en esos términos; cada frase se puede verificar contra los datos, y el cálculo es inmediato para todas las alertas sin dependencias nuevas. En el dashboard, la tabla de alertas muestra el motivo principal y, al seleccionar filas, aparece la explicación completa con el pedido sugerido.
+
+El dashboard se rediseñó para dejar de verse como una aplicación genérica: barra lateral marino con el logotipo, encabezado tipo folio con el sello del corte de datos, tipografía IBM Plex Sans alojada en el proyecto, indicadores en franjas y bloques por tema. En la página de Inicio se agregaron una barra de salud del inventario y un mapa de la red de doce sucursales, en el que el tamaño de cada punto representa su ingreso y un anillo rojo marca las tres con más alertas pendientes (Figuras 4.14 a 4.19). Los datos, los indicadores y la API no cambiaron.
+
+Por último, se preparó el despliegue. El equipo eligió Azure for Students, que ofrece crédito sin tarjeta y una base PostgreSQL incluida durante doce meses. La revisión de la imagen Docker encontró dos problemas que habrían impedido el despliegue: la imagen no incluía el logotipo y el proceso diario dependía de archivos de datos que no viajan en la imagen. Se corrigieron copiando el logotipo y haciendo que el proceso genere los datos simulados cuando no existen. Además, se agregó un servicio de carga inicial y se midió el pico de memoria del reentrenamiento, cercano a 1.2 GB, para dimensionar la tarea diaria en 2 GB. El plan de recursos, pasos y riesgos quedó en docs/06; el despliegue no se ha ejecutado. [PENDIENTE: actualizar si se despliega antes de la entrega.]

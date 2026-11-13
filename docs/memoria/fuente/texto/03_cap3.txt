@@ -1,0 +1,60 @@
+# CAPÍTULO III DEFINICIÓN DEL PROYECTO | DEFINICIÓN DEL PROYECTO
+
+## 3.1 Planteamiento del problema
+
+NexaTech Solutions administra información de cinco áreas distintas sin una plataforma central que la integre, la valide y la analice de forma automática. Esta situación dificulta consultar el histórico, detectar inconsistencias, dar seguimiento al inventario y generar indicadores confiables para la toma de decisiones. Los datos llegan con duplicados, valores faltantes, formatos inconsistentes y errores de captura, y nadie mide cuántos hay ni de qué tipo.
+
+La empresa tampoco cuenta con mecanismos automatizados para supervisar la calidad de los datos, respaldar la información, monitorear los servicios que la administran ni anticipar cambios en la demanda. El resurtido se decide con estimaciones manuales que no consideran la estacionalidad ni la demanda que se pierde por faltantes. Como consecuencia, alrededor de 4.7 % de la demanda queda sin surtir mientras otros productos acumulan existencia para más de seis meses.
+
+La pregunta que guía el proyecto es la siguiente: ¿cómo puede una empresa mediana con datos dispersos y defectuosos convertirlos, de forma automática y verificable, en indicadores, pronósticos y alertas que apoyen sus decisiones de inventario?
+
+## 3.2 Justificación
+
+La información empresarial solo tiene valor cuando se puede almacenar, consultar y analizar de manera confiable. Un proyecto de datos no puede limitarse a la etapa de modelado: también debe resolver cómo se obtienen los registros, cómo se validan, dónde se almacenan, cómo se protegen y cómo se convierten en información útil. DATACORE integra esas etapas en un solo sistema y permite aplicar conocimientos de bases de datos, programación, procesamiento de información, análisis exploratorio, aprendizaje automático, despliegue y administración de servicios.
+
+El uso de datos simulados aporta una ventaja metodológica: se conoce la verdad. El simulador registra cada defecto que inyecta y la demanda real de cada día, incluida la que no se surtió. Gracias a ello, cada componente se puede evaluar con números objetivos en lugar de suponer que funciona.
+
+Desde el punto de vista del negocio, un mejor pronóstico y un sistema de alertas permiten reducir tanto el desabasto como el exceso de inventario. Desde el punto de vista social, el proyecto se alinea con dos Objetivos de Desarrollo Sostenible:
+
+- ODS 9, Industria, innovación e infraestructura: la plataforma usa infraestructura digital, análisis de datos e inteligencia artificial para modernizar la gestión de la información de una empresa.
+- ODS 12, Producción y consumo responsables: el pronóstico de demanda y las alertas de exceso y de productos sin rotación apoyan una planeación de compras que reduce el inventario inmovilizado, las mermas y las compras innecesarias.
+
+## 3.3 Alcances y restricciones
+
+El alcance contempla un prototipo funcional de principio a fin. La Tabla 3.1 resume lo que el proyecto incluye y lo que queda fuera.
+
+[TABLA] Alcance del proyecto
+| Incluye | No incluye |
+| Generador de datos simulados reproducible, con defectos controlados y su bitácora. | Integración con sistemas reales de punto de venta, CRM o almacén. |
+| ETL con reglas de calidad medibles y base de datos PostgreSQL. | Facturación y procesos contables. |
+| Análisis exploratorio e indicadores de ventas, inventario e incidencias. | Autenticación de usuarios finales con roles complejos. |
+| Modelo de pronóstico de demanda y alertas de inventario. | Aplicación móvil. |
+| API, dashboard, respaldos, bitácoras y monitoreo. | Procesamiento en tiempo real; la carga es por lotes, una vez al día. |
+| Contenedor, integración continua y manuales técnico y de usuario. | Compra automática: las alertas apoyan la decisión, no la sustituyen. |
+[NOTA] Elaboración propia.
+
+El proyecto se desarrolló con las siguientes restricciones:
+
+- Todos los datos son simulados. No se usa información de personas ni de empresas reales, y las marcas de los productos son inventadas.
+- El periodo simulado va del 1 de enero de 2023 al 31 de diciembre de 2025.
+- El equipo de desarrollo es una computadora con Windows 11 y unos 16 GB de memoria, sin Docker ni compilador de C instalados. Por eso se usó Python 3.15 con paquetes precompilados y la imagen de Docker se construye en el servicio de integración continua.
+- Solo se usan herramientas de código abierto o gratuitas.
+- La cuenta de Railway disponible para el equipo aloja otro proyecto escolar, por lo que el despliegue debe hacerse en un proyecto separado y solo con la aprobación del equipo.
+- La duración del proyecto es de 16 semanas.
+
+## 3.4 Objetivo General
+
+Desarrollar una plataforma inteligente para la centralización, administración, análisis y monitoreo de la información empresarial de NexaTech Solutions S.A. de C.V., mediante una arquitectura de datos que automatice el procesamiento de la información, asegure su integridad y genere herramientas analíticas y predictivas que apoyen la toma de decisiones sobre ventas e inventarios.
+
+## 3.5 Objetivos específicos
+
+1. Diseñar una arquitectura de software y datos que centralice la información generada por las distintas áreas de la empresa simulada.
+2. Diseñar e implementar una base de datos relacional para administrar la información de productos, clientes, sucursales, ventas, proveedores e inventarios.
+3. Generar conjuntos de datos simulados con características y comportamientos similares a los observados en operaciones empresariales reales.
+4. Desarrollar procesos ETL para la extracción, limpieza, transformación, validación y carga automática de la información.
+5. Implementar reglas de calidad que identifiquen valores faltantes, duplicados, registros inconsistentes y posibles anomalías.
+6. Desarrollar un módulo de análisis y aprendizaje automático que estime la demanda de productos e identifique riesgos de desabasto o de exceso de inventario.
+7. Implementar un dashboard que permita consultar indicadores, tendencias, alertas, resultados analíticos y predicciones.
+8. Configurar mecanismos de respaldo, registro de eventos y monitoreo básico de los servicios de la plataforma.
+9. Desplegar e integrar los componentes del sistema en un entorno centralizado de ejecución.
+10. Documentar la arquitectura, el funcionamiento, las pruebas y los resultados del proyecto para facilitar su uso y mantenimiento.

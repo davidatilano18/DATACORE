@@ -1,0 +1,242 @@
+# CAPÍTULO V CONCLUSIONES | CONCLUSIÓN
+
+## 5.1 Conclusiones generales
+
+DATACORE cumplió su objetivo general: reúne en una sola plataforma reproducible la ingesta, la validación, el almacenamiento, el análisis, el pronóstico, las alertas, la visualización y la operación de los datos de NexaTech Solutions. La plataforma convierte archivos dispersos y defectuosos de cinco áreas en indicadores, pronósticos y alertas que un usuario consulta en el navegador, y lo hace de forma automática cada día.
+
+La decisión de diseño más valiosa fue construir una verdad de referencia desde el simulador. Gracias a ella, cada componente se evaluó con números en lugar de suponer que funcionaba: el ETL contra los defectos inyectados, el modelo contra la demanda real y contra cuatro métodos de referencia, las alertas contra los faltantes que realmente ocurrieron y el detector de anomalías contra las fallas registradas. Esta forma de trabajo permitió además encontrar resultados no evidentes, como que excluir las semanas censuradas empeora el sesgo del modelo, o que las fallas cortas del punto de venta son casi indetectables con datos diarios.
+
+La etapa de mejoras llevó la plataforma de funcionar a demostrar su valor. Una simulación de 2025 sobre la demanda real mostró que reponer con DATACORE habría reducido 14 % las ventas perdidas y 12 % el inventario inmovilizado, con un beneficio neto estimado de 346 mil pesos al año. Las alertas de desabasto pasaron a ser más precisas, a recomendar cuánto y cuándo pedir y a explicar su porqué en lenguaje sencillo.
+
+Los resultados principales confirman el valor de la plataforma. El ETL detecta los 18 tipos de defecto sin falsos positivos y recupera información en lugar de solo descartarla. El modelo de demanda supera a los métodos de referencia en todos los casos evaluados, con más ventaja en la temporada alta, cuando un error cuesta más. Las alertas de desabasto anticipan más de la mitad de los faltantes reales, con un costo en alertas de más que se midió y se explicó. La operación incluye respaldos que se restauran y se comparan, monitoreo, bitácoras y pruebas automáticas en cada cambio.
+
+## 5.2 Cumplimiento de los objetivos
+
+La Tabla 5.1 resume el cumplimiento de cada objetivo específico.
+
+[TABLA] Cumplimiento de los objetivos específicos
+| Objetivo específico | Estado | Evidencia |
+| 1. Arquitectura de software y datos | Cumplido | Arquitectura de cinco capas (Figura 4.2). |
+| 2. Base de datos relacional | Cumplido | Esquemas core, ops y kpi en PostgreSQL 16 (Anexo 1). |
+| 3. Datos simulados realistas | Cumplido | Tres años, 181,054 tickets, reglas documentadas. |
+| 4. Procesos ETL | Cumplido | Carga automática en unos 50 segundos. |
+| 5. Reglas de calidad | Cumplido | 18 de 18 tipos detectados, 100 % de precisión. |
+| 6. Módulo de aprendizaje automático | Cumplido | WAPE de 26.9 %; alertas con explicación y pedido sugerido; impacto de ≈ $346 mil al año. |
+| 7. Dashboard | Cumplido | Seis páginas sobre la API. |
+| 8. Respaldos, eventos y monitoreo | Cumplido | Respaldo verificado, bitácoras y monitoreo. |
+| 9. Despliegue en un entorno centralizado | Parcial | Contenedor probado en integración continua; plataforma elegida (Azure for Students) y plan documentado; despliegue pendiente. |
+| 10. Documentación | Cumplido | Seis documentos técnicos, dos manuales y este reporte. |
+[NOTA] Elaboración propia.
+
+## 5.3 Relación con las competencias de la estadía
+
+El proyecto se diseñó para ejercer las tres competencias de la estadía del programa de TSU en Datos e Inteligencia Artificial (Tabla 5.2).
+
+[TABLA] Aplicación de las competencias de la estadía
+| Competencia | Aplicación en el proyecto |
+| Analizar los datos de un sistema para su identificación, codificación y tratamiento adecuado de la información. | Diseño de variables, generación de datos, limpieza, reglas de calidad, codificación de llaves, análisis exploratorio e ingeniería de variables del modelo. |
+| Manejar arquitecturas de hardware y software para la administración de la información. | Diseño e integración de la base de datos, el ETL, la API, el dashboard, el contenedor y la integración continua. |
+| Gestionar el mantenimiento de infraestructura de centros de datos mediante herramientas de hardware y software para asegurar la integridad y calidad de los datos. | Respaldos con prueba de recuperación, bitácoras, monitoreo de servicios, validaciones de integridad, control de errores y pruebas automatizadas. |
+[NOTA] Elaboración propia con base en la propuesta del proyecto.
+
+## 5.4 Limitaciones
+
+El proyecto tiene limitaciones que deben considerarse al interpretar sus resultados:
+
+- Los datos son simulados. Aunque las reglas de simulación imitan una operación real, un caso real tendría patrones que el simulador no contempla, como promociones de la competencia, cambios de precio a mitad de año o errores de captura de otros tipos.
+- La validación con origen móvil cubre un solo año, 2025. Con más historia podrían evaluarse más bloques y épocas.
+- Las sucursales y los productos nuevos tienen poca historia, y su pronóstico depende más de la categoría, la región y la media del producto.
+- La fecha de baja de los productos descontinuados no existe en los datos de negocio, por lo que el modelo los ve como ceros durante el entrenamiento.
+- El detector de anomalías casi no ve las fallas cortas con datos diarios y no revisa las fechas especiales del calendario.
+- La plataforma no se ha desplegado en un servidor de producción; se ejecuta en el equipo de desarrollo y en la integración continua.
+- El impacto en dinero depende de un supuesto de costo de mantener inventario (25 % anual) y de una simulación; es una estimación, no una medición en operación real.
+
+## 5.5 Trabajo futuro
+
+A partir de las limitaciones se proponen las siguientes mejoras:
+
+- Desplegar la plataforma en un servidor o servicio de nube, con la tarea diaria programada y el monitoreo contra las direcciones públicas.
+- Descontar de la cantidad sugerida los pedidos en camino, registrando las órdenes de compra en la base.
+- Volver a calcular los pronósticos de la simulación con la historia que habría generado DATACORE, no con la de la política actual.
+- Registrar la fecha de baja de los productos y modelar su ciclo de vida.
+- Detectar anomalías con datos por hora para encontrar fallas cortas del punto de venta.
+- Extender la corrección de correos a variantes como .con.mx.
+- Probar la plataforma con datos de una empresa real, aprovechando que el ETL ya maneja los formatos y defectos más comunes.
+
+## 5.6 Experiencia del equipo
+
+El proyecto permitió al equipo recorrer el ciclo completo de una plataforma de datos, desde el diseño hasta la operación, y no solo la etapa de modelado que suele dominar los proyectos escolares. El equipo comprobó que la mayor parte del trabajo de un sistema de datos ocurre antes y después del modelo: en entender las fuentes, limpiar los datos, decidir cómo medir y asegurar que todo siga funcionando al día siguiente.
+
+El uso de asistentes de programación con inteligencia artificial aceleró el desarrollo, pero también dejó claro que su trabajo requiere revisión. Los errores más importantes del proyecto, como la elección de la prueba estadística del detector de anomalías o la pérdida del historial de pronósticos al recargar los datos, se encontraron gracias a la revisión humana y a las pruebas automatizadas.
+
+### 5.6.1 Reflexión de David Israel Atilano Quiroz
+
+Para David Israel Atilano Quiroz, DATACORE nació de una decisión. Mientras buscaba vacantes de analista de datos, en lugar de ver la espera como tiempo perdido, decidió usarla para prepararse. Quería que el proyecto sirviera fuera del aula: entender cómo se trabaja con datos en una empresa real y qué podría ofrecerle desde el primer día. Por eso no se quedó en un modelo aislado. Fue la primera vez que construyó un sistema de datos completo, de principio a fin. Empezó simulando tres años de operación de NexaTech con defectos puestos a propósito, como los que llegan de las distintas áreas de un negocio. Después vinieron un ETL que los detecta, un modelo de pronóstico, una API y un dashboard que se respaldan, se monitorean y se prueban de forma automática.
+
+La lección más importante fue que un resultado no vale hasta que se demuestra con datos que el modelo no ha visto. Por eso el trabajo se apoyó en la validación con origen móvil y en comparar siempre contra métodos sencillos. El modelo final dejó el error semanal por producto en 26.9 %, frente a 28.8 % de una media móvil: una mejora modesta, pero real. Esa misma disciplina obligó a descartar ideas que parecían buenas. Los umbrales de alerta por segmento solo ganaron en uno de cuatro bloques, porque se ajustaban al ruido. Usar la alerta de desabasto como señal de compra habría costado cerca de 1.77 millones de pesos al año, en vez de ahorrar 346 mil. Entender por qué fallaban enseñó tanto como lo que sí funcionó.
+
+Lo más difícil, y también lo más interesante, fue darse cuenta de que las ventas no son la demanda. Cuando un producto se agota, el historial no muestra a los clientes que no lo encontraron, y un modelo entrenado solo con ventas aprende a pedir de menos. Corregir ese sesgo, junto con ajustar el umbral, subió la F1 de las alertas de 0.239 a 0.281. Así, el proyecto pasó de "el modelo predice" a "el sistema le dice a cada sucursal cuánto pedir, para cuándo y por qué". También aprendió a usar asistentes de programación con inteligencia artificial como herramientas que aceleran el trabajo, pero cuyo resultado se revisa y se prueba antes de confiar en él.
+
+Al terminar, la pregunta con la que empezó tiene una respuesta concreta, y el tiempo de espera se convirtió en experiencia. Hoy puede ofrecerle a una empresa más que gráficas: datos limpios y confiables, indicadores que se pueden verificar y recomendaciones traducidas a dinero y a decisiones que cualquier persona del negocio puede entender. Todo se validó con datos simulados, así que su siguiente paso es aplicar esta misma forma de trabajar con datos reales, como analista de datos.
+
+### 5.6.2 Reflexión de Ricardo Leonel Ordaz Aguilar
+
+Durante el desarrollo del proyecto, Ricardo Leonel Ordaz Aguilar comprendió que construir una plataforma de datos no consiste únicamente en desarrollar un modelo, sino que requiere un proceso completo de análisis, preparación, validación y organización de la información. Su participación en la revisión de los avances de cada fase y en la preparación de la defensa le permitió entender mejor las decisiones técnicas que se tomaron, así como la importancia de utilizar métodos adecuados para obtener resultados confiables. También aprendió que técnicas como la pérdida Poisson, pensada para conteos con muchos ceros, y la validación con origen móvil, que evita usar datos del futuro, cumplen una función importante para mejorar las predicciones y evitar errores en el análisis. Finalmente, el proyecto le permitió fortalecer sus conocimientos en el manejo de datos, desarrollar una visión más completa del trabajo en equipo y comprender cómo las herramientas de análisis pueden utilizarse para resolver problemas reales y apoyar la toma de decisiones.
+
+#! REFERENCIAS BIBLIOGRÁFICAS
+
+[REF] Batini, C., y Scannapieco, M. (2016). *Data and information quality: Dimensions, principles and techniques*. Springer. https://doi.org/10.1007/978-3-319-24106-7
+[REF] Codd, E. F. (1970). A relational model of data for large shared data banks. *Communications of the ACM, 13*(6), 377–387. https://doi.org/10.1145/362384.362685
+[REF] Croston, J. D. (1972). Forecasting and stock control for intermittent demands. *Operational Research Quarterly, 23*(3), 289–303. https://doi.org/10.2307/3007885
+[REF] Fowler, M. (2006). *Continuous integration*. martinfowler.com. https://martinfowler.com/articles/continuousIntegration.html
+[REF] Friedman, J. H. (2001). Greedy function approximation: A gradient boosting machine. *The Annals of Statistics, 29*(5), 1189–1232. https://doi.org/10.1214/aos/1013203451
+[REF] Hyndman, R. J., y Athanasopoulos, G. (2021). *Forecasting: Principles and practice* (3.ª ed.). OTexts. https://otexts.com/fpp3/
+[REF] Hyndman, R. J., y Koehler, A. B. (2006). Another look at measures of forecast accuracy. *International Journal of Forecasting, 22*(4), 679–688. https://doi.org/10.1016/j.ijforecast.2006.03.001
+[REF] Kimball, R., y Ross, M. (2013). *The data warehouse toolkit: The definitive guide to dimensional modeling* (3.ª ed.). Wiley.
+[REF] Kleppmann, M. (2017). *Designing data-intensive applications*. O'Reilly Media.
+[REF] Merkel, D. (2014). Docker: Lightweight Linux containers for consistent development and deployment. *Linux Journal, 2014*(239), Artículo 2.
+[REF] Organización de las Naciones Unidas. (2015). *Transformar nuestro mundo: la Agenda 2030 para el Desarrollo Sostenible* (A/RES/70/1).
+[REF] Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A., Cournapeau, D., Brucher, M., Perrot, M., y Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. *Journal of Machine Learning Research, 12*, 2825–2830.
+[REF] Rousseeuw, P. J., y Croux, C. (1993). Alternatives to the median absolute deviation. *Journal of the American Statistical Association, 88*(424), 1273–1283. https://doi.org/10.1080/01621459.1993.10476408
+[REF] Silver, E. A., Pyke, D. F., y Thomas, D. J. (2017). *Inventory and production management in supply chains* (4.ª ed.). CRC Press.
+[REF] Syntetos, A. A., y Boylan, J. E. (2005). The accuracy of intermittent demand estimates. *International Journal of Forecasting, 21*(2), 303–314. https://doi.org/10.1016/j.ijforecast.2004.10.001
+[REF] Tashman, L. J. (2000). Out-of-sample tests of forecasting accuracy: An analysis and review. *International Journal of Forecasting, 16*(4), 437–450. https://doi.org/10.1016/S0169-2070(00)00065-0
+[REF] Wang, R. Y., y Strong, D. M. (1996). Beyond accuracy: What data quality means to data consumers. *Journal of Management Information Systems, 12*(4), 5–33. https://doi.org/10.1080/07421222.1996.11518099
+
+#A ANEXOS
+
+## Anexo 1. Diccionario de datos
+
+Las Tablas A.1 a A.8 describen las tablas del esquema core y la Tabla A.9 las del esquema ops. Las llaves primarias se indican con PK y las foráneas con FK. Los montos están en pesos mexicanos.
+
+[TABLA] Diccionario de datos: core.sucursales (12 filas)
+| Columna | Tipo | Nulo | Descripción |
+| id_sucursal | SMALLINT | No | Llave primaria. |
+| codigo | VARCHAR(10) | No | Código de negocio único (QRO01, CDMX02…), usado en los archivos crudos. |
+| nombre | VARCHAR(80) | No | Nombre comercial. |
+| ciudad, estado | VARCHAR | No | Ubicación. |
+| region | VARCHAR(20) | No | Bajío, Centro, Occidente o Norte. |
+| tamano | VARCHAR(10) | No | grande, mediana o pequena; determina la afluencia. |
+| fecha_apertura | DATE | No | Fecha de apertura. |
+
+[TABLA] Diccionario de datos: core.categorias (10 filas) y core.proveedores (35 filas)
+| Columna | Tipo | Nulo | Descripción |
+| id_categoria | SMALLINT | No | Llave primaria de categorías. |
+| nombre | VARCHAR(40) | No | Nombre de la categoría. |
+| id_proveedor | INTEGER | No | Llave primaria de proveedores. |
+| nombre | VARCHAR(120) | No | Razón social del proveedor. |
+| rfc | VARCHAR(13) | No | RFC de persona moral (ficticio). |
+| ciudad, estado, telefono, email | VARCHAR | Sí | Datos de contacto. |
+| dias_entrega | SMALLINT | No | Tiempo de entrega comprometido, de 2 a 10 días. |
+| activo | BOOLEAN | No | Proveedor vigente. |
+
+[TABLA] Diccionario de datos: core.productos (400 filas)
+| Columna | Tipo | Nulo | Descripción |
+| id_producto | INTEGER | No | Llave primaria. |
+| sku | VARCHAR(20) | No | Código único NX-<CAT>-<nnnnn>, usado en los archivos crudos. |
+| nombre | VARCHAR(120) | No | Artículo, marca ficticia y presentación. |
+| id_categoria | SMALLINT | No | FK a categorías. |
+| id_proveedor | INTEGER | No | FK a proveedores. |
+| precio_unitario | NUMERIC(10,2) | No | Precio de lista vigente (2025). |
+| costo_unitario | NUMERIC(10,2) | No | Costo de adquisición; menor que el precio. |
+| unidad | VARCHAR(10) | No | Unidad de venta. |
+| fecha_alta | DATE | No | Inicio de comercialización. |
+| activo | BOOLEAN | No | Falso si el producto se descontinuó. |
+
+[TABLA] Diccionario de datos: core.clientes (8,000 filas)
+| Columna | Tipo | Nulo | Descripción |
+| id_cliente | INTEGER | No | Llave primaria. |
+| nombre, apellido_paterno, apellido_materno | VARCHAR | No / No / Sí | Nombre completo (ficticio). |
+| email | VARCHAR(120) | Sí | Correo electrónico. |
+| telefono | VARCHAR(15) | Sí | 10 dígitos con lada de su ciudad. |
+| ciudad, estado | VARCHAR | Sí | Domicilio. |
+| tipo_cliente | VARCHAR(10) | No | minorista (90 %) o mayorista (10 %). |
+| fecha_registro | DATE | No | Alta en el CRM; siempre anterior a su primera compra. |
+| id_sucursal_preferida | SMALLINT | Sí | FK a sucursales. |
+
+[TABLA] Diccionario de datos: core.ventas (unas 181 mil filas)
+| Columna | Tipo | Nulo | Descripción |
+| id_venta | BIGINT | No | Llave primaria. |
+| folio | VARCHAR(20) | No | Código de sucursal y consecutivo; único. |
+| fecha_hora | TIMESTAMP | No | Momento del ticket, de 9:00 a 21:00. |
+| id_sucursal | SMALLINT | No | FK a sucursales. |
+| id_cliente | INTEGER | Sí | FK a clientes; nulo para público general. |
+| metodo_pago | VARCHAR(20) | Sí | efectivo, tarjeta_debito, tarjeta_credito o transferencia. |
+| total | NUMERIC(12,2) | No | Suma de los subtotales del detalle. |
+| estatus | VARCHAR(12) | No | completada o cancelada. |
+
+[TABLA] Diccionario de datos: core.detalle_venta (unas 641 mil filas)
+| Columna | Tipo | Nulo | Descripción |
+| id_detalle | BIGINT | No | Llave primaria. |
+| id_venta | BIGINT | No | FK a ventas. |
+| id_producto | INTEGER | No | FK a productos. |
+| cantidad | INTEGER | No | Unidades, mayor que cero. |
+| precio_unitario | NUMERIC(10,2) | No | Precio de lista del año de la venta. |
+| descuento_pct | NUMERIC(4,3) | No | 0.05 para mayoristas; de 0.10 a 0.25 en Buen Fin para algunas categorías. |
+| subtotal | NUMERIC(12,2) | No | cantidad × precio_unitario × (1 − descuento_pct). |
+
+[TABLA] Diccionario de datos: core.inventario y core.movimientos_inventario
+| Columna | Tipo | Nulo | Descripción |
+| id_sucursal, id_producto | — | No | Llave primaria compuesta del inventario y FK en los movimientos. |
+| existencia | INTEGER | No | Unidades disponibles al cierre del periodo. |
+| stock_minimo, stock_maximo | INTEGER | No | Punto de reorden y nivel objetivo vigentes. |
+| id_movimiento | BIGINT | No | Llave primaria de los movimientos, en orden cronológico. |
+| fecha | DATE | No | Día del movimiento. |
+| tipo | VARCHAR(20) | No | INVENTARIO_INICIAL, ENTRADA_COMPRA, SALIDA_VENTA, MERMA o AJUSTE_CONTEO. |
+| cantidad | INTEGER | No | Con signo: positiva si entra, negativa si sale. |
+| existencia_resultante | INTEGER | No | Existencia después del movimiento. |
+| referencia | VARCHAR(20) | Sí | Orden de compra en las entradas. |
+
+[TABLA] Diccionario de datos: core.incidencias (unas 6,700 filas)
+| Columna | Tipo | Nulo | Descripción |
+| id_incidencia | INTEGER | No | Llave primaria. |
+| fecha_reporte | DATE | No | Fecha del reporte. |
+| id_sucursal | SMALLINT | No | FK a sucursales. |
+| id_producto | INTEGER | Sí | FK a productos cuando aplica. |
+| tipo | VARCHAR(25) | No | FALLA_SISTEMA, DESABASTO, RETRASO_PROVEEDOR, MERCANCIA_DANADA, DIFERENCIA_INVENTARIO o QUEJA_CLIENTE. |
+| severidad | VARCHAR(5) | No | baja, media o alta. |
+| descripcion | VARCHAR(250) | No | Texto libre. |
+| estatus | VARCHAR(12) | No | abierta, en_proceso o resuelta. |
+| fecha_resolucion | DATE | Sí | Solo si está resuelta. |
+
+[TABLA] Tablas del esquema ops
+| Tabla | Propósito |
+| etl_ejecuciones | Una fila por proceso ETL: duración, filas leídas, cargadas y rechazadas, y error. |
+| calidad_hallazgos | Una fila por registro afectado por una regla: regla, acción y valores antes y después. |
+| modelos | Versiones de modelos con sus métricas en JSONB y la marca del modelo activo. |
+| predicciones_demanda | Pronóstico semanal por sucursal y producto con su intervalo. |
+| alertas_inventario | Alertas de desabasto, exceso y sin rotación, con su cobertura y su estado de atención. |
+| anomalias | Días-sucursal con valor observado, esperado y puntaje de la prueba. |
+| respaldos, monitoreo, corridas | Evidencia de la operación: respaldos verificados, chequeos y pasos del proceso diario. |
+
+## Anexo 2. Guía rápida de operación
+
+La Tabla A.10 resume los comandos para instalar y operar la plataforma desde cero. El detalle completo se encuentra en el manual técnico del repositorio.
+
+[TABLA] Comandos principales de la plataforma
+| Tarea | Comando |
+| Generar los datos simulados | python -m datacore.generator --salida data |
+| Crear la base, los roles, las tablas y las vistas | python -m datacore.db_setup |
+| Ejecutar el ETL con evaluación | python -m datacore.etl --evaluar |
+| Evaluar el modelo contra los métodos de referencia | python -m datacore.ml evaluar |
+| Entrenar, pronosticar y generar alertas | python -m datacore.ml publicar |
+| Levantar la API | python -m uvicorn datacore.api.app:app --port 8000 |
+| Levantar el dashboard | python -m streamlit run src/datacore/dashboard/Inicio.py |
+| Respaldar y verificar | python -m datacore.operacion respaldo --verificar |
+| Revisar el estado de la plataforma | python -m datacore.operacion monitoreo |
+| Ejecutar el proceso diario | python -m datacore.operacion diario |
+| Ejecutar las pruebas | python -m pytest -q |
+[NOTA] Elaboración propia con base en docs/manual_tecnico.md.
+
+## Anexo 3. Guía rápida para el usuario del dashboard
+
+El dashboard se abre en el navegador, en la dirección que proporcione el área de sistemas. Los datos se actualizan una vez al día, de madrugada, y la fecha de la última actualización aparece en el estado de la plataforma de la página de Inicio. Los montos están en pesos mexicanos. Las tablas se pueden ordenar con un clic en el encabezado y descargar en formato CSV. La Tabla A.11 explica cómo interpretar cada tipo de alerta.
+
+[TABLA] Interpretación de las alertas para el usuario
+| Alerta | Qué significa | Qué hacer |
+| RIESGO_DESABASTO | La existencia probablemente no alcanza hasta que llegue un nuevo pedido. | Revisar y adelantar el pedido al proveedor. |
+| EXCESO_INVENTARIO | Al ritmo pronosticado, la existencia dura más de 180 días. | Frenar las compras; considerar promociones o traspasos. |
+| SIN_ROTACION | Hay piezas, no se vende nada desde hace 13 semanas y no se espera demanda. | Evaluar liquidar o descontinuar. |
+[NOTA] Elaboración propia con base en docs/manual_usuario.md.
+
+La alerta de desabasto es conservadora a propósito: en las pruebas anticipó alrededor de la mitad de los faltantes reales, a cambio de varias alertas que al final no terminaron en faltante. Debe usarse como lista de revisión y no como orden de compra automática. Para registrar que una alerta ya se atendió, se selecciona en la lista y se pulsa el botón Marcar como atendidas.

@@ -1,0 +1,206 @@
+### 4.1.6 Quinta etapa: análisis exploratorio e indicadores
+
+Una vez cargados los datos se realizó un análisis exploratorio con el fin de entender su comportamiento y orientar el diseño del modelo. El análisis usa únicamente las diez tablas del esquema core y nunca las tablas ocultas de la verdad de referencia, de modo que reproduce lo que vería un analista en una empresa real. Se analizaron 179,302 ventas completadas por un ingreso total de 285.7 millones de pesos; las 1,752 ventas canceladas se excluyeron de todos los indicadores.
+
+La Figura 4.6 muestra la evolución del ingreso mensual. Se observa una tendencia creciente año con año y un pico pronunciado en noviembre y diciembre. El mes de mayor ingreso fue noviembre de 2025, con 11.5 millones de pesos, y el de menor ingreso, febrero de 2023, con 5.6 millones.
+
+[FIGURA eda_ventas_mensuales.png 15] Ingreso mensual de NexaTech Solutions, 2023 a 2025
+[NOTA] Elaboración propia con datos simulados.
+
+La estacionalidad difiere por categoría (Figura 4.7). El índice estacional más alto corresponde a Juguetes en diciembre, con 1.98 veces su media mensual; Papelería sube en agosto por el regreso a clases y Electrónica a fin de año. Esta diferencia justificó incluir en el modelo un índice estacional por categoría en lugar de uno general.
+
+[FIGURA eda_categorias_mes.png 15] Índice estacional por categoría y mes
+[NOTA] Elaboración propia con datos simulados.
+
+Por sucursal (Figura 4.8), CDMX01 encabeza el ingreso con 39.0 millones de pesos, 13.7 % del total, con un ticket promedio de 1,755 pesos. Las sucursales abiertas en 2024 tienen menos ingreso acumulado porque operaron menos tiempo, lo que obliga a comparar por día de operación y a que el modelo considere la antigüedad de cada sucursal.
+
+[FIGURA eda_sucursales.png 15] Ingreso y ticket promedio por sucursal
+[NOTA] Elaboración propia con datos simulados.
+
+La concentración de las ventas confirma el principio de Pareto (Figura 4.9): 110 de los 400 productos, es decir 27.5 %, generan 80.2 % del ingreso. Estos productos forman la clase A y merecen el pronóstico más preciso, porque un error en ellos cuesta más.
+
+[FIGURA eda_pareto_productos.png 15] Curva de Pareto del ingreso por producto
+[NOTA] Elaboración propia con datos simulados.
+
+Los patrones de calendario (Figura 4.10) muestran que el sábado tiene el mayor ingreso diario medio, 361 mil pesos, y que la hora pico es la una de la tarde. En la mezcla de ventas (Figura 4.11), la transferencia es el método de pago con más ingreso (39.7 %), seguida del efectivo (27.7 %); los mayoristas generan 49.4 % del ingreso, aunque son solo el 10 % de los clientes registrados.
+
+[FIGURA eda_calendario.png 15] Ingreso por día de la semana y por hora
+[NOTA] Elaboración propia con datos simulados.
+
+[FIGURA eda_mezcla.png 15] Participación en el ingreso por método de pago y segmento de cliente
+[NOTA] Elaboración propia con datos simulados.
+
+El análisis del inventario (Figura 4.12) revela el problema que motiva el proyecto. Al 31 de diciembre de 2025, 1,098 de los 4,800 pares sucursal-producto tienen cobertura mayor a 180 días, incluidos 506 con existencia y sin ventas en 90 días, mientras que 120 pares están sin existencia. La mediana de la cobertura es de 57 días.
+
+[FIGURA eda_inventario.png 15] Distribución de la cobertura de inventario al cierre de 2025
+[NOTA] Elaboración propia con datos simulados.
+
+Por último, las incidencias (Figura 4.13) están dominadas por los retrasos de proveedor, con 3,180 de 6,720 reportes, y su pico ocurrió en mayo de 2024 con 108.
+
+[FIGURA eda_incidencias.png 15] Incidencias mensuales por tipo
+[NOTA] Elaboración propia con datos simulados.
+
+El análisis dejó cinco implicaciones para el modelo de demanda. Primera: hay que incorporar mes, día de la semana, quincenas y eventos comerciales, y validar con cortes temporales. Segunda: la demanda es muy intermitente, pues 88.7 % de los días-par de productos activos no tienen venta, por lo que conviene pronosticar por semana y compararse con métodos para series intermitentes. Tercera: hay 44 productos lanzados dentro del periodo y 20 inactivos al cierre, y los días previos al alta no deben interpretarse como demanda cero. Cuarta: las dos sucursales nuevas requieren modelar su maduración. Quinta: las ventas están censuradas por la disponibilidad, de modo que una existencia en cero no debe confundirse con falta de demanda.
+
+Con base en este análisis se construyó el esquema kpi, cuyas vistas calculan los indicadores que consumen la API y el dashboard (Tabla 4.10). Las vistas filtran solo las ventas completadas, y las dos más costosas se materializan con índices únicos para que las consultas respondan rápido. El ETL las refresca al terminar cada carga.
+
+[TABLA] Vistas de indicadores del esquema kpi
+| Vista | Qué mide |
+| ventas_diarias_sucursal | Tickets, unidades, ingreso y ticket promedio diario por sucursal. |
+| ventas_mensuales_categoria | Ingreso y unidades por categoría y su participación dentro del mes. |
+| ventas_semanales_producto (materializada) | Demanda semanal por sucursal y producto; la semana inicia en lunes. |
+| abc_productos | Clasificación de Pareto histórica por ingreso. |
+| cobertura_inventario | Existencia actual frente a la demanda de los últimos 90 días y estado del par. |
+| desabasto_mensual (materializada) | Proporción de días-par sin existencia en cada mes. |
+| incidencias_mensuales | Reportes por tipo y severidad, pendientes y duración media de resolución. |
+| calidad_ultima_carga | Hallazgos de calidad por regla y acción de la última carga. |
+| resumen_ejecutivo | Una fila con ventas históricas y recientes, crecimiento, clientes, inventario e incidencias. |
+[NOTA] Elaboración propia con base en db/vistas.sql.
+
+### 4.1.7 Sexta etapa: modelo de pronóstico de demanda
+
+El módulo de inteligencia artificial pronostica cuántas unidades de cada producto se venderán en cada sucursal durante las próximas cuatro semanas. La Tabla 4.11 resume las decisiones de diseño del modelo.
+
+[TABLA] Decisiones de diseño del modelo de demanda
+| Decisión | Elección | Motivo |
+| Unidad de pronóstico | Unidades por semana (lunes a domingo), sucursal y producto | Por día, 89 % de los casos no tiene venta; por semana baja a 57 % y coincide con el ciclo de compras. |
+| Horizontes | 1 a 4 semanas, un modelo por horizonte | Cubre el tiempo de entrega más la revisión semanal sin acumular errores de pronósticos encadenados. |
+| Algoritmo | HistGradientBoostingRegressor con pérdida Poisson, un modelo global para los 4,800 pares | Maneja conteos con muchos ceros, comparte patrones entre pares y entrena en alrededor de un minuto por horizonte. |
+| Validación | Origen móvil: 4 bloques de 13 semanas de 2025 | Mide el error en todas las épocas del año, incluidos Buen Fin y Navidad. |
+| Métricas | WAPE y sesgo | El MAPE no está definido con ceros; el WAPE pondera por volumen. |
+[NOTA] Elaboración propia con base en docs/05_modelo_demanda.md.
+
+El modelo usa 37 variables agrupadas en cinco familias (Tabla 4.12). Para el horizonte h, todo rezago o ventana se calcula con datos hasta la semana t − h, y una prueba automatizada verifica que ninguna variable use información del futuro.
+
+[TABLA] Variables del modelo de demanda
+| Familia | Variables |
+| Historia del par | Rezagos de 1 a 4 semanas; misma semana del año anterior, simple y suavizada; medias móviles de 4, 8, 13 y 26 semanas; desviación estándar; máximo; fracción de semanas en cero; suavizamiento exponencial; media histórica; pronóstico SBA. |
+| Disponibilidad | Fracción de días sin existencia en la semana de origen y en las últimas 4 semanas. |
+| Contexto | Precio cobrado; media del producto en todas las sucursales; índice estacional de la categoría. |
+| Calendario | Semana del año, mes, Buen Fin, Navidad, fin de año, Reyes, Día de las Madres, Día del Niño, regreso a clases y número de quincenas en la semana. |
+| Atributos | Sucursal, categoría, región, tamaño de sucursal, días de entrega del proveedor y semanas de vida del par. |
+[NOTA] Elaboración propia con base en docs/05_modelo_demanda.md.
+
+Las variables de disponibilidad merecen una mención especial. Permiten al modelo distinguir entre una semana sin venta porque nadie pidió el producto y una semana sin venta porque no había producto. Sin ellas, el modelo aprendería que los productos que se agotan tienen poca demanda, justo lo contrario de lo que ocurre.
+
+Para saber si el modelo aporta valor se comparó contra cuatro métodos de referencia: el pronóstico ingenuo (la semana anterior), el estacional (la misma semana del año anterior), la media móvil de 8 semanas y el método SBA para demanda intermitente. Un modelo de aprendizaje automático solo se justifica si supera a estos métodos simples.
+
+Además del pronóstico puntual, el modelo produce un intervalo del 80 % con una distribución binomial negativa, cuya dispersión se estima en la validación. Para las alertas se calcula la demanda durante el tiempo de reposición, que es la suma de los pronósticos semanales prorrateados a los días de entrega del proveedor más una semana de revisión, junto con su percentil 90. Con estos valores se aplican las reglas de la Tabla 4.13.
+
+[TABLA] Reglas de las alertas de inventario
+| Alerta | Regla | Acción sugerida |
+| RIESGO_DESABASTO | Existencia actual menor que el percentil 90 de la demanda en el tiempo de reposición (regla original; en la mejora 2 se sustituyó por la demanda esperada con corrección de censura, sección 4.1.13). | Adelantar el pedido al proveedor. |
+| EXCESO_INVENTARIO | Cobertura mayor a 180 días al ritmo pronosticado. | Frenar compras, promover o traspasar a otra sucursal. |
+| SIN_ROTACION | Existencia positiva, cero ventas en 13 semanas y pronóstico menor que 0.25 unidades por semana. | Evaluar liquidar o descontinuar. |
+[NOTA] Elaboración propia con base en docs/05_modelo_demanda.md.
+
+El comando de publicación entrena los cuatro modelos con toda la historia, pronostica las siguientes cuatro semanas, genera las alertas y registra la versión del modelo con sus métricas en ops.modelos. Los pronósticos se guardan en ops.predicciones_demanda y las alertas en ops.alertas_inventario. El proceso completo tarda unos ocho minutos.
+
+Como componente complementario (RF-13) se implementó un detector de anomalías en las ventas diarias de cada sucursal. El valor esperado de cada día se calcula solo con datos pasados: la mediana de los últimos ocho días iguales de la semana, ajustada por la tendencia de los 28 días previos. Sobre los tickets, que son conteos, se aplica una prueba de Poisson y se marca el día si la probabilidad de observar un valor tan bajo es menor que 1 %. Sobre el ingreso se calcula también un puntaje z robusto con MAD, que se publica como información adicional. Las fechas especiales del calendario se excluyen, porque con solo tres años de historia no hay referencias suficientes para ellas.
+
+La primera versión del detector, propuesta por un agente de código, usaba MAD tanto para el ingreso como para los tickets. En la revisión se cambió la prueba de los tickets por la de Poisson, más adecuada para conteos, lo que casi duplicó su desempeño, como se muestra en la sección de resultados.
+
+### 4.1.8 Séptima etapa: API y dashboard
+
+La API se construyó con FastAPI y expone 27 rutas agrupadas en seis temas (Tabla 4.14). Su documentación interactiva se genera automáticamente en la ruta /docs. Todas las rutas, salvo /salud, exigen una clave de acceso enviada en el encabezado X-API-Key cuando esta se configura. Las consultas usan el rol de base de datos de solo lectura y SQL parametrizado, lo que evita la inyección de código; solo la acción de marcar una alerta como atendida usa el rol con permiso de escritura. Los parámetros de entrada, como fechas, sucursales y límites de filas, se validan antes de llegar a la base, y cada petición queda registrada en la bitácora con su método, ruta, código de respuesta y latencia.
+
+[TABLA] Rutas de la API agrupadas por tema
+| Tema | Rutas principales |
+| Operación | /salud, /etl/ejecuciones, /calidad/ultima-carga, /calidad/hallazgos, /anomalias, /operacion/monitoreo, /operacion/respaldos, /operacion/corridas, /incidencias/mensuales, /incidencias/abiertas |
+| Catálogos | /catalogos/sucursales, /catalogos/categorias, /catalogos/productos |
+| Indicadores | /kpi/resumen |
+| Ventas | /ventas/diarias, /ventas/sucursales, /ventas/categorias, /ventas/semanales, /productos/abc |
+| Inventario | /inventario/cobertura, /inventario/estados, /inventario/desabasto, /alertas, /alertas/{id}/atender |
+| Pronóstico | /modelo, /pronosticos, /pronosticos/resumen |
+[NOTA] Elaboración propia con base en src/datacore/api/app.py.
+
+El dashboard se construyó con Streamlit y consume únicamente la API, nunca la base de datos directamente. Así, cualquier regla de seguridad o de cálculo se aplica en un solo lugar. Se diseñó una identidad visual propia con los colores del proyecto, componentes reutilizables y una paleta validada para que las gráficas se lean con claridad. El dashboard tiene seis páginas, descritas en la Tabla 4.15.
+
+[TABLA] Páginas del dashboard
+| Página | Contenido | Usuario principal |
+| Inicio | Indicadores de los últimos 12 meses, salud del inventario, ingreso mensual por año, categorías, sucursales y estado de la plataforma. | Dirección |
+| Ventas | Filtros de periodo y sucursal; serie diaria con media móvil; patrón semanal; ventas por sucursal; mezcla por categoría; clasificación ABC. | Dirección y comercial |
+| Inventario | Pares por estado; distribución por sucursal; mapa de calor del desabasto mensual; tabla de cobertura con filtros. | Almacén |
+| Alertas | Alertas pendientes por tipo, sucursal y categoría; acción para marcarlas como atendidas; composición por sucursal. | Compras y almacén |
+| Pronóstico | Búsqueda de producto; historia de 52 semanas y pronóstico de 4 con intervalo del 80 %; demanda por sucursal; precisión del modelo. | Compras |
+| Calidad y operación | Hallazgos de la última carga; ejecuciones del ETL; anomalías; incidencias; estado de respaldos, monitoreo y corridas. | Sistemas |
+[NOTA] Elaboración propia.
+
+La página de Inicio (Figura 4.14) funciona como resumen ejecutivo. Abre con un encabezado tipo folio que muestra el corte de datos y una franja con el ingreso, los tickets y el ticket promedio de los últimos 12 meses y su variación frente al año anterior. Debajo, una barra reparte los 4,800 pares sucursal-producto por estado de inventario, seguida de las alertas pendientes de cada tipo. Después aparece el mapa de la red de sucursales, en el que el tamaño de cada punto es su ingreso y un anillo rojo marca las tres con más alertas, y al final el ingreso mensual del año en curso contra los dos anteriores.
+
+[FIGURA dash_inicio.png 14] Página de Inicio del dashboard
+[NOTA] Elaboración propia. Captura del dashboard con datos simulados al 31 de diciembre de 2025.
+
+La página de Ventas (Figura 4.15) permite elegir el periodo y la sucursal. Muestra el ingreso diario con su media móvil de siete días, el patrón por día de la semana, el ranking de sucursales y la mezcla por categoría.
+
+[FIGURA dash_ventas.png 14] Página de Ventas del dashboard
+[NOTA] Elaboración propia. Captura con el filtro de los últimos 30 días.
+
+La página de Inventario (Figura 4.16) clasifica los 4,800 pares en cinco estados: sin existencia, bajo mínimo, exceso, sin rotación y normal. Incluye un mapa de calor del desabasto mensual por sucursal en el que se distingue la apertura de las sucursales QRO03 y MOR01.
+
+[FIGURA dash_inventario.png 14] Página de Inventario del dashboard
+[NOTA] Elaboración propia.
+
+La página de Alertas (Figura 4.17) es la herramienta operativa principal. Lista las alertas pendientes; las de desabasto traen la cantidad sugerida y la fecha límite de pedido, y todas su motivo principal. Al seleccionar filas aparece la explicación completa de cada alerta. La página permite filtrar, marcar como atendidas las alertas revisadas y ver su composición por sucursal para repartir el trabajo.
+
+[FIGURA dash_alertas.png 14] Página de Alertas del dashboard
+[NOTA] Elaboración propia.
+
+La página de Pronóstico (Figura 4.18) permite buscar un producto y ver su venta de las últimas 52 semanas junto con el pronóstico de las próximas cuatro y su banda de incertidumbre. También desglosa la demanda esperada por sucursal y compara la precisión del modelo con la media móvil.
+
+[FIGURA dash_pronostico.png 14] Página de Pronóstico del dashboard
+[NOTA] Elaboración propia.
+
+La página de Calidad y operación (Figura 4.19) muestra cuántos registros corrigió, marcó o rechazó cada regla en la última carga y el resultado de cada ejecución del ETL, entre otras pestañas sobre anomalías, incidencias y el estado de la plataforma.
+
+[FIGURA dash_calidad.png 14] Página de Calidad y operación del dashboard
+[NOTA] Elaboración propia.
+
+### 4.1.9 Octava etapa: operación, respaldos y monitoreo
+
+Para que la plataforma funcione sin intervención manual se implementaron los mecanismos de la Tabla 4.16.
+
+[TABLA] Mecanismos de operación de la plataforma
+| Mecanismo | Funcionamiento | Evidencia |
+| Respaldo verificado | pg_dump de los esquemas core, ops y kpi; restauración en una base temporal y comparación de filas tabla por tabla; se conservan los 7 más recientes. | ops.respaldos y logs/respaldo.log |
+| Monitoreo | Revisa la base de datos, la API, el dashboard, el espacio en disco y la antigüedad del último ETL, respaldo y modelo; devuelve error si algo falla. | ops.monitoreo y logs/monitoreo.log |
+| Proceso diario | Respaldo, ETL, publicación del modelo, anomalías y monitoreo, en ese orden. | ops.corridas y logs/diario.log |
+| Bitácoras | Un archivo por componente con rotación a 5 MB y 5 copias. | Carpeta logs |
+| Integración continua | Pruebas completas con PostgreSQL 16 y construcción de la imagen Docker en cada cambio. | GitHub Actions |
+| Contenedor | Un solo Dockerfile; la variable SERVICIO elige entre API, dashboard, proceso diario o monitoreo. | Dockerfile |
+[NOTA] Elaboración propia con base en docs/06_operacion_y_despliegue.md.
+
+La Figura 4.20 muestra el orden del proceso diario. El respaldo va antes del ETL porque el ETL recarga el esquema core por completo; de esta forma siempre existe una copia previa a cualquier cambio. Si un paso falla, la corrida se detiene y el error queda registrado.
+
+[FIGURA proceso_diario.png 16] Pasos del proceso diario automatizado
+[NOTA] Elaboración propia.
+
+El monitoreo compara la antigüedad de cada proceso con umbrales configurables: alerta si el último ETL o el último respaldo tienen más de 26 horas, si el modelo activo tiene más de 8 días o si quedan menos de 5 GB libres en disco. Para la programación automática se preparó un script que registra la tarea diaria a las 2:00 y el monitoreo cada 30 minutos en Windows, y un archivo cron equivalente para Linux.
+
+Durante la revisión de esta etapa se encontró un error importante. Las tablas de pronósticos, alertas y anomalías tenían llaves foráneas hacia el esquema core, y como el ETL recarga core con TRUNCATE en cascada, cada carga borraba también el historial de pronósticos y las alertas ya atendidas. La corrección consistió en quitar esas llaves foráneas, agregar una migración para las bases existentes y una prueba automatizada que impide que vuelvan a aparecer.
+
+La integración continua se configuró en GitHub Actions y se ejecuta con cada cambio a la rama principal. Levanta PostgreSQL 16 como servicio, genera un conjunto de datos reducido de 120 productos y 1,500 clientes, ejecuta el ETL con su evaluación y la publicación del modelo, levanta la API y corre todas las pruebas. Después prueba el respaldo con su restauración y el monitoreo, construye la imagen Docker, la arranca contra la misma base y consulta sus rutas. Al final publica el reporte de calidad y las bitácoras como evidencia.
+
+El despliegue se preparó durante la etapa de mejoras: el equipo eligió Azure for Students y se corrigió la imagen para que funcione en un servidor nuevo (sección 4.1.15). Como alternativa se documentó un servidor privado virtual con Docker o con el archivo cron de Linux.
+
+### 4.1.10 Pruebas del sistema
+
+Cada módulo cuenta con pruebas automatizadas escritas con pytest. Las pruebas que requieren la base de datos, la API o el dashboard se ejecutan completas en la integración continua; al cierre de la etapa de mejoras el proyecto reunía 116 pruebas aprobadas. La Tabla 4.17 resume lo que verifica cada archivo de pruebas.
+
+[TABLA] Pruebas automatizadas por módulo
+| Archivo | Qué verifica |
+| test_generator.py | Reproducibilidad con la semilla, llaves foráneas, que el total de cada venta sea la suma de sus renglones, que el inventario cuadre con sus movimientos y que las salidas de inventario igualen a las ventas. |
+| test_etl.py | Que se detecte cada tipo de defecto, que las tablas no tengan duplicados ni llaves inválidas, que los totales cuadren y la fidelidad contra la referencia. |
+| test_kpi.py | Que las vistas coincidan con cálculos independientes: ingreso diario, unidades semanales, clases ABC, tasa de desabasto y resumen ejecutivo. |
+| test_ml.py | Ausencia de fuga de información, que el modelo supere al pronóstico ingenuo, la validación con origen móvil, la evaluación de alertas y el método SBA. |
+| test_anomalias.py | Que el detector solo use datos pasados y respete el calendario y las aperturas, y la evaluación sin duplicar métricas. |
+| test_api.py | Que todas las rutas respondan, la validación de filtros, la clave de acceso, la atención de alertas y el intervalo agregado del pronóstico. |
+| test_dashboard.py | Que las páginas funcionen con la API real y muestren un aviso claro cuando la API no está disponible. |
+| test_operacion.py | Respaldo y recuperación, retención de respaldos, monitoreo y que ops no dependa de core por llaves foráneas. |
+| test_eda.py | Que el reporte exploratorio se genere completo. |
+| test_impacto.py, test_alertas_segmentadas.py | Motor de simulación, calibración del cuantil y evaluación anidada de las alertas sin usar el bloque evaluado. |
+| test_recomendacion.py, test_explicaciones.py | Cantidad sugerida, fecha límite y factores del porqué de cada alerta. |
+| test_datos_iniciales.py | Que un servidor nuevo genere los datos solo cuando faltan. |
+[NOTA] Elaboración propia con base en la carpeta tests del repositorio.
+
+Una prueba particularmente importante es la que verifica la ausencia de fuga de información en el modelo: altera los datos posteriores a una fecha de corte y comprueba que las variables calculadas hasta esa fecha no cambian. Si alguna variable dependiera del futuro, la prueba fallaría.

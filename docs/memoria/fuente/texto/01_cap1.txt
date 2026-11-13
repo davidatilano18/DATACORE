@@ -1,0 +1,65 @@
+# CAPÍTULO I ANTECEDENTES | ANTECEDENTES
+
+## 1.1 Contexto del proyecto de estadía
+
+La estadía es el periodo en el que el estudiante del programa de Técnico Superior Universitario aplica en un proyecto completo las competencias adquiridas durante su formación. El presente proyecto se desarrolló en la Universidad Politécnica de Querétaro (UPQ), dentro del programa educativo de TSU en Datos e Inteligencia Artificial, por David Israel Atilano Quiroz y Ricardo Leonel Ordaz Aguilar, con una duración planeada de 16 semanas.
+
+El equipo optó por un escenario empresarial simulado en lugar de una empresa real. La decisión responde a tres razones. La primera es que permite trabajar con un volumen y una variedad de datos comparables a los de una organización mediana sin depender de información confidencial ni de convenios de acceso. La segunda es que el escenario se puede controlar: se conoce de antemano qué defectos tienen los datos y cuál es la demanda real de cada producto, lo que permite medir con exactitud qué tan bien funciona cada componente. La tercera es que el proyecto no se limita a un modelo de aprendizaje automático aislado, sino que integra administración de datos, infraestructura, calidad de la información, análisis, inteligencia artificial, visualización y operación en una misma solución.
+
+El nombre del proyecto, DATACORE, alude al papel que cumple la plataforma: ser el núcleo donde se concentran, validan y analizan los datos de la empresa. La Figura 1.1 muestra la identidad visual que se diseñó para el proyecto y que se usa en el dashboard.
+
+[FIGURA logotipo.png 9] Logotipo de DATACORE
+[NOTA] Elaboración propia. Los colores corresponden al granate institucional de la UPQ (#8A1538) y a un azul marino (#1B2A4A).
+
+## 1.2 La empresa NexaTech Solutions
+
+NexaTech Solutions S.A. de C.V. es una empresa ficticia, diseñada exclusivamente con fines académicos, que se dedica a la comercialización y distribución de productos de consumo. Opera 12 sucursales en 9 estados, agrupadas en cuatro regiones: Bajío, Centro, Occidente y Norte. Cada sucursal tiene un tamaño (grande, mediana o pequeña) que determina su afluencia de clientes. Dos de ellas, El Marqués (QRO03) y Morelia (MOR01), abrieron dentro del periodo analizado, en abril y septiembre de 2024, respectivamente. La Tabla 1.1 resume la red de sucursales.
+
+[TABLA] Sucursales de NexaTech Solutions
+| Código | Nombre | Estado | Región | Tamaño | Apertura |
+| QRO01 | Querétaro Centro | Querétaro | Bajío | Grande | marzo de 2015 |
+| QRO02 | Querétaro Juriquilla | Querétaro | Bajío | Mediana | agosto de 2018 |
+| QRO03 | El Marqués | Querétaro | Bajío | Pequeña | abril de 2024 |
+| CDMX01 | CDMX Coyoacán | Ciudad de México | Centro | Grande | junio de 2012 |
+| CDMX02 | CDMX Azcapotzalco | Ciudad de México | Centro | Mediana | febrero de 2016 |
+| GDL01 | Guadalajara Zapopan | Jalisco | Occidente | Grande | septiembre de 2014 |
+| MTY01 | Monterrey San Nicolás | Nuevo León | Norte | Grande | mayo de 2017 |
+| LEO01 | León Centro | Guanajuato | Bajío | Mediana | enero de 2019 |
+| SLP01 | San Luis Potosí | San Luis Potosí | Bajío | Pequeña | octubre de 2020 |
+| PUE01 | Puebla Angelópolis | Puebla | Centro | Mediana | marzo de 2018 |
+| AGS01 | Aguascalientes | Aguascalientes | Bajío | Pequeña | julio de 2021 |
+| MOR01 | Morelia | Michoacán | Occidente | Pequeña | septiembre de 2024 |
+[NOTA] Elaboración propia con base en la configuración del generador de datos.
+
+El catálogo comprende 400 productos de 10 categorías: Abarrotes, Bebidas, Limpieza, Cuidado personal, Electrónica, Papelería, Juguetes, Hogar, Mascotas y Dulcería y botanas. Los productos los surten 35 proveedores, cada uno con un tiempo de entrega comprometido de 2 a 10 días. Las marcas son inventadas. La empresa atiende a unos 8,000 clientes registrados, de los cuales alrededor del 10 % son mayoristas, y además vende a público general sin registro, que representa cerca del 30 % de los tickets.
+
+## 1.3 Sistemas de información y fuentes de datos
+
+Como ocurre en muchas empresas medianas, cada área de NexaTech genera su información en un sistema distinto y la exporta en su propio formato. No existe un repositorio central: para responder una pregunta que cruce áreas, por ejemplo qué productos se agotaron en las sucursales que más venden, alguien tiene que reunir y conciliar los archivos a mano. La Tabla 1.2 muestra las fuentes de datos.
+
+[TABLA] Fuentes de datos por área de NexaTech Solutions
+| Área | Sistema de origen | Formato de exportación |
+| Ventas | Punto de venta (POS) | CSV por año (ventas_AAAA.csv y detalle_venta_AAAA.csv) |
+| Compras | Hojas de cálculo | Excel (productos.xlsx y proveedores.xlsx) |
+| Mercadotecnia | CRM | CSV en Windows-1252 separado por punto y coma (clientes.csv) |
+| Almacén | Sistema de inventarios | CSV (movimientos_inventario_AAAA.csv e inventario_actual.csv) |
+| Operaciones | Mesa de ayuda | CSV (incidencias.csv) |
+[NOTA] Elaboración propia.
+
+Las fuentes difieren en codificación de caracteres, separadores, formatos de fecha y forma de identificar las entidades. Los archivos usan códigos de negocio, como el código de sucursal o el SKU del producto, en lugar de llaves internas. Además, los datos llegan con los problemas típicos de la captura manual: duplicados, valores faltantes, formatos inconsistentes y errores de digitación.
+
+## 1.4 Situación de la gestión de datos y del inventario
+
+El resurtido de cada sucursal se decide con estimaciones manuales basadas en las ventas recientes. Este método tiene dos debilidades. La primera es que no anticipa la estacionalidad: la demanda de juguetes casi se duplica en diciembre, la de papelería sube en agosto y el Buen Fin multiplica las ventas de varias categorías. La segunda es más sutil: cuando un producto se agota, la venta registrada es menor que la demanda real, y si la siguiente estimación se basa en esas ventas, el pedido vuelve a quedarse corto.
+
+El resultado son dos problemas simultáneos. Por un lado, alrededor del 4.7 % de la demanda queda sin surtir por falta de existencia. Por otro, hay productos con existencia para más de seis meses o que no se han vendido en meses, lo que inmoviliza capital y espacio de almacén. Al cierre de 2025, 1,098 de los 4,800 pares sucursal-producto tenían cobertura superior a 180 días y 120 estaban sin existencia.
+
+A esto se suman la falta de mecanismos automatizados para supervisar la calidad de los datos, respaldar la información y monitorear los servicios. Los procesos dependen de revisiones manuales y de información repartida en varias fuentes.
+
+## 1.5 Antecedentes tecnológicos
+
+Las plataformas de datos modernas suelen organizarse en capas: ingesta, almacenamiento, procesamiento, analítica y consumo (Kleppmann, 2017). Las grandes empresas resuelven estas capas con productos comerciales de almacén de datos, orquestación e inteligencia de negocios. Para una empresa mediana, la combinación de herramientas de código abierto como Python, PostgreSQL y bibliotecas de aprendizaje automático permite construir una solución equivalente a un costo mucho menor, a cambio de más trabajo de integración.
+
+En el pronóstico de demanda, la práctica tradicional en el comercio minorista son los métodos estadísticos por serie, como el suavizamiento exponencial y, para demanda intermitente, el método de Croston (1972) y su corrección de Syntetos y Boylan (2005). En los últimos años, los modelos globales de aprendizaje automático entrenados con muchas series a la vez, en particular los basados en árboles con gradient boosting, se han vuelto una alternativa competitiva, porque aprovechan patrones compartidos entre productos y sucursales e incorporan con facilidad variables de calendario y precio (Hyndman y Athanasopoulos, 2021).
+
+En calidad de datos, la literatura distingue varias dimensiones, como completitud, exactitud, consistencia y unicidad, que deben medirse explícitamente en lugar de suponerse (Wang y Strong, 1996; Batini y Scannapieco, 2016). DATACORE retoma estas ideas: mide cada regla de calidad contra una verdad conocida y cada pronóstico contra métodos de referencia.

@@ -70,7 +70,7 @@ Guía completa: [manual técnico](docs/manual_tecnico.md).
 | Mejoras 4 | "¿Por qué?" de cada alerta: 2 o 3 factores en lenguaje sencillo | Listo |
 | Mejoras 5 | Despliegue en Azure for Students: imagen preparada y plan en [docs/06](docs/06_operacion_y_despliegue.md) | Elegido, no ejecutado |
 | 15–16 | [Manual técnico](docs/manual_tecnico.md) y [manual de usuario](docs/manual_usuario.md) | Primera versión |
-| 15–16 | Memoria de estadía | En redacción |
+| 15–16 | Memoria de estadía en formato UPQ (85 páginas): [PDF](docs/memoria/Memoria_Estadia_DATACORE.pdf), [fuente](docs/memoria/README.md) | Lista para revisión |
 
 ## Datos generados
 
