@@ -196,8 +196,9 @@ CSS = f"""
     .dc-franja.ligera .dc-kpi:nth-child(odd) {{ padding-left: 0; }}
     .dc-kpi .v {{ font-size: 1.6rem; }}
     .dc-franja.ligera .dc-kpi .v {{ font-size: 1.4rem; }}
-    div[data-baseweb="tab-list"] {{ gap: .9rem; }}
-    button[data-baseweb="tab"] p {{ font-size: .82rem; }}
+    div[data-baseweb="tab-list"] {{ gap: .5rem; }}
+    button[data-baseweb="tab"] {{ padding-left: .4rem; padding-right: .4rem; }}
+    button[data-baseweb="tab"] p {{ font-size: .78rem; white-space: nowrap; }}
   }}
   /* Barra de salud: proporción de pares por estado, con leyenda de ícono, texto y conteo. */
   .dc-salud {{ display: flex; height: 22px; border-radius: 4px; overflow: hidden; margin: .5rem 0 .6rem; }}
